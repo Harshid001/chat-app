@@ -7,7 +7,7 @@ const app = express();
 
 //imports
 const connectDB = require('./lib/db');
-const clerkMiddleware = require('@clerk/express');
+const ClerkMiddleware = require('@clerk/express');
 const cors = require('cors');
 
 //env imports
@@ -17,7 +17,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL
 //middleware 
 app.use(express.json());
 app.use(cors({origin:FRONTEND_URL,credentials:true}));
-app.use(clerkMiddleware());
+app.use(ClerkMiddleware());
 
 //routes
 app.get('/health',(req,res)=>{
