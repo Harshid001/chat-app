@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const clerkWebhook = require('./webhooks/clerk.webhook');
 const job = require('./lib/cron');
+const authRoutes = require('./routes/auth.route');
 //env imports
 const PORT = process.env.PORT;
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -29,7 +30,7 @@ app.use(clerkMiddleware());
 app.get('/health',(req,res)=>{
     res.status(200).json({ok:true});
 });
-
+app.use('/api/auth',authRoutes);
 if(fs.existsSync(publicDir)){
     app.use(express.static(publicDir));
     app.get("/{*any}",(req,res,next)=>{
