@@ -11,7 +11,7 @@ const { clerkMiddleware } = require('@clerk/express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-
+const job = require('./lib/cron');
 //env imports
 const PORT = process.env.PORT
 const FRONTEND_URL = process.env.FRONTEND_URL
@@ -39,4 +39,8 @@ if(fs.existsSync(publicDir)){
 app.listen(PORT,()=>{
     connectDB();
     console.log(`backend Server Running At Port ${PORT}`);
+    
+    if(NODE_ENV ==='production'){
+        job.start();
+    }
 });
