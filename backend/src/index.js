@@ -11,12 +11,15 @@ const { clerkMiddleware } = require('@clerk/express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const clerkWebhook = require('./webhooks/clerk.webhook');
 const job = require('./lib/cron');
 //env imports
 const PORT = process.env.PORT;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const NODE_ENV = process.env.NODE_ENV;
 const publicDir = path.join(process.cwd(),"public");
+
+app.use('/api/webhooks/clerk',express.raw({type:"application/json"}),clerkWebhook);
 //middleware 
 app.use(express.json());
 app.use(cors({origin:FRONTEND_URL,credentials:true}));
