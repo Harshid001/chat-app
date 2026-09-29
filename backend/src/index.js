@@ -13,9 +13,9 @@ const fs = require('fs');
 const path = require('path');
 const job = require('./lib/cron');
 //env imports
-const PORT = process.env.PORT
-const FRONTEND_URL = process.env.FRONTEND_URL
-
+const PORT = process.env.PORT;
+const FRONTEND_URL = process.env.FRONTEND_URL;
+const NODE_ENV = process.env.NODE_ENV;
 const publicDir = path.join(process.cwd(),"public");
 //middleware 
 app.use(express.json());
