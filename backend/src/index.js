@@ -7,7 +7,7 @@ const app = express();
 
 //imports
 const connectDB = require('./lib/db');
-const ClerkMiddleware = require('@clerk/express');
+const { clerkMiddleware } = require('@clerk/express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +20,7 @@ const publicDir = path.join(process.cwd(),"public");
 //middleware 
 app.use(express.json());
 app.use(cors({origin:FRONTEND_URL,credentials:true}));
-app.use(ClerkMiddleware());
+app.use(clerkMiddleware());
 
 //routes
 app.get('/health',(req,res)=>{
