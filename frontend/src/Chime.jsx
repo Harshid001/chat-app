@@ -29,7 +29,7 @@ export default function Chime() {
           colorInput: dark ? "#272e28" : "#f5f6f3",
           colorInputForeground: dark ? "#edf0e9" : "#242a27",
           colorNeutral: dark ? "#edf0e9" : "#242a27",
-          borderRadius: "14px",
+          borderRadius: "16px",
           fontFamily: "Inter Variable, Inter, sans-serif",
         },
       }}

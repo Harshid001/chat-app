@@ -35,7 +35,7 @@ export function Button({
     <Tag
       type={asChild ? undefined : "button"}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
         {
           "border border-primary bg-primary text-primary-foreground shadow-xs hover:bg-primary/90":
             variant === "primary",
@@ -89,7 +89,7 @@ export function Input({ className, ...props }) {
   return (
     <input
       className={cn(
-        "h-11 w-full min-w-0 rounded-full border border-border bg-surface/75 px-3.5 backdrop-blur-xl text-base outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/15 disabled:opacity-50 md:text-sm",
+        "h-11 w-full min-w-0 rounded-full border border-border bg-surface/75 px-3.5 backdrop-blur-xl text-base outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:opacity-50 md:text-sm",
         className,
       )}
       {...props}
@@ -100,7 +100,7 @@ export function Textarea({ className, ...props }) {
   return (
     <textarea
       className={cn(
-        "min-h-11 w-full resize-none rounded-xl bg-transparent px-2 py-3 text-base leading-6 outline-none placeholder:text-muted-foreground md:text-sm",
+        "min-h-11 w-full resize-none rounded-xl bg-transparent px-2 py-3 text-base leading-6 outline-none transition-all placeholder:text-muted-foreground focus-visible:outline-none md:text-sm",
         className,
       )}
       {...props}
@@ -129,17 +129,17 @@ export function Avatar({ user, size = "", online = false, className }) {
         className={cn(
           "flex size-full items-center justify-center overflow-hidden rounded-full text-sm font-medium ring-1 ring-black/5 dark:ring-white/10",
           [
-            "bg-[#e2e9df] text-[#4b6544]",
-            "bg-[#e4e6ed] text-[#586178]",
-            "bg-[#eddfd5] text-[#866450]",
-            "bg-[#e9e2d0] text-[#7c704b]",
+            "bg-[#e2e9df] text-[#36593f]",
+            "bg-[#e4e6ed] text-[#424d67]",
+            "bg-[#eddfd5] text-[#634735]",
+            "bg-[#e9e2d0] text-[#5a502f]",
           ][tone],
           size === "avatar-large" && "text-xl",
         )}
       >
         <AvatarPrimitive.Image
           src={user?.profilePic || undefined}
-          alt=""
+          alt={name}
           className="size-full object-cover"
           referrerPolicy="no-referrer"
         />
@@ -147,9 +147,12 @@ export function Avatar({ user, size = "", online = false, className }) {
       </AvatarPrimitive.Root>
       {online && (
         <span
+          role="status"
           aria-label="Online"
           className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-surface bg-status"
-        />
+        >
+          <span className="sr-only"> (Online)</span>
+        </span>
       )}
     </span>
   );
@@ -304,12 +307,12 @@ export function SegmentedControl({
         <ToggleGroup.Item
           key={key}
           value={key}
-          className="relative flex min-h-9 flex-1 items-center justify-center gap-2 rounded-full px-3 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=on]:bg-surface data-[state=on]:text-foreground data-[state=on]:shadow-xs"
+          className="relative flex min-h-10 sm:min-h-9 flex-1 items-center justify-center gap-2 rounded-full px-3 text-xs font-medium text-foreground/75 outline-none transition-[transform,background-color,color] duration-150 active:scale-[0.99] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=on]:bg-surface data-[state=on]:text-foreground data-[state=on]:shadow-xs"
         >
           {Icon && <Icon size={16} />}
           {text}
           {count > 0 && (
-            <span className="rounded-md bg-background px-1.5 py-0.5 text-[10px] tabular-nums">
+            <span className="rounded-md bg-background px-1.5 py-0.5 text-[10px] tabular-nums text-foreground/80">
               {count}
             </span>
           )}
