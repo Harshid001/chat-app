@@ -1,6 +1,7 @@
 const User = require("../models/user.model");
 const Message = require("../models/message.model");
 const {hasImageKitConfig,uploadChatMedia} = require('../lib/imagekit');
+const { getReceiverSocketId, io } = require("../lib/socket");
 const getUsersForSidebar = async (req, res) => {
 
   try {
@@ -126,7 +127,11 @@ const sendMessage = async(req,res)=>{
       video:videoUrl
     });
     await newMessage.save();
-
+    // making it realtime with socketio
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if(receiverSocketId){
+      io.to(receiverSocketId).emit("newMessage",newMessage);
+    }
     res.status(201).json({newMessage});
   }catch(e){
     console.error("errror in sendMessage",e.message);

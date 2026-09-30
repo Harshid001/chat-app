@@ -3,7 +3,7 @@ require('dotenv').config();
 
 //express
 const express = require('express');
-const app = express();
+const {app,server} = require('./lib/socket')
 
 //imports
 const connectDB = require('./lib/db');
@@ -42,7 +42,7 @@ if(fs.existsSync(publicDir)){
 
 
 //start listening
-app.listen(PORT,()=>{
+server.listen(PORT,()=>{
     connectDB();
     console.log(`backend Server Running At Port ${PORT}`);
     if(NODE_ENV ==='production'){
