@@ -108,6 +108,9 @@ test("conversation, send failure, retry, search and mobile navigation", async ({
   await expect(
     page.getByText("See you Saturday!", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Search loaded messages" }),
+  ).toHaveCount(0);
   await page.screenshot({
     path: `test-results/${info.project.name}-chat.png`,
     fullPage: true,
@@ -117,7 +120,7 @@ test("conversation, send failure, retry, search and mobile navigation", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  if (info.project.name !== "desktop") {
+  if (["android-layout", "ios-layout"].includes(info.project.name)) {
     await page.getByRole("button", { name: "Back to conversations" }).click();
     await expect(
       page.getByRole("textbox", { name: "Search conversations" }),
@@ -149,12 +152,10 @@ test("contacts, appearance, sign out clears conversation state", async ({
   )
     await page.getByRole("button", { name: "Back to conversations" }).click();
   await page.getByRole("button", { name: "Account and appearance" }).click();
-  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await page.getByRole("radio", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: /Good conversations/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Less noise/ })).toBeVisible();
   await expect(page.getByText("Jamie Chen")).toHaveCount(0);
 });
 test("offline retains loaded messages, disables sends and restores draft", async ({
@@ -189,9 +190,9 @@ test("manifest, install help, offline app shell and API cache isolation", async 
   await mockApi(page);
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: /Take murmur with you/ }),
+    page.getByRole("button", { name: /Get Chime for your device/ }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Take murmur with you/ }).click();
+  await page.getByRole("button", { name: /Get Chime for your device/ }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "iPhone & iPad" }),
@@ -237,9 +238,7 @@ test("welcome screen is responsive and sign-in controls work", async ({
     sessionStorage.setItem("fixture-signed-out", "true"),
   );
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /Good conversations/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Less noise/ })).toBeVisible();
   await page.screenshot({
     path: `test-results/${info.project.name}-welcome.png`,
     fullPage: true,
@@ -311,4 +310,53 @@ test("cached shell recovers when external authentication cannot load", async ({
     page.getByRole("button", { name: "Try again", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Making a little room for you…")).toHaveCount(0);
+});
+
+test("Radix dialogs restore focus and emoji popovers work in dark mode", async ({
+  page,
+}, info) => {
+  await mockApi(page);
+  await page.goto("/");
+  const compose = page
+    .getByRole("button", { name: "New message", exact: true })
+    .first();
+  await compose.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "New message" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(compose).toBeFocused();
+  await page.getByRole("button", { name: "Choose appearance" }).click();
+  await page.getByRole("menuitemradio", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: /Jamie Chen/ }).click();
+  await page.getByRole("button", { name: "Choose an emoji" }).click();
+  await page.getByRole("button", { name: "Wave", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Message", exact: true }),
+  ).toHaveValue("👋");
+  await expect(
+    page.getByRole("textbox", { name: "Message", exact: true }),
+  ).toBeFocused();
+  await page
+    .getByRole("button", { name: "Conversation details", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Conversation details" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `test-results/${info.project.name}-dark-dialog.png`,
+    fullPage: true,
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.screenshot({
+    path: `test-results/${info.project.name}-dark-chat.png`,
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

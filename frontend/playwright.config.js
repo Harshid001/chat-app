@@ -21,6 +21,14 @@ export default defineConfig({
         viewport: { width: 1440, height: 960 },
       },
     },
+    {
+      name: "tablet",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1024, height: 768 },
+        hasTouch: true,
+      },
+    },
     { name: "android-layout", use: { ...devices["Pixel 7"] } },
     {
       name: "ios-layout",

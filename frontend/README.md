@@ -1,6 +1,6 @@
-# Murmur
+# Chime
 
-A responsive chat PWA built with React, Zustand, Tailwind CSS, Axios, Socket.IO, Lucide, and Clerk. The interface has frosted glass panels, iMessage-style bubbles, and light, dark, and system themes.
+A responsive chat PWA built with React, Zustand, Tailwind CSS, Axios, Socket.IO, Lucide, and Clerk. The interface uses Tailwind design tokens, Radix interactive primitives, Framer Motion, pill controls, and restrained frosted surfaces. Light, dark, and system themes share the same component styling. Motion respects the reduced-motion preference.
 
 ## Local development
 
@@ -19,8 +19,8 @@ Set `VITE_CLERK_PUBLISHABLE_KEY` to the public key for the backend's Clerk appli
 Build the existing monolithic Docker image **from the repository root**:
 
 ```sh
-docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key -t murmur .
-docker run --env-file backend/.env -p 3001:3001 murmur
+docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key -t chime .
+docker run --env-file backend/.env -p 3001:3001 chime
 ```
 
 The publishable key is public and embedded at build time. Use a production Clerk instance for the deployed domain. The image intentionally fails to build if the key is absent. Runtime secrets stay on the server; `.dockerignore` excludes local environment files and dependencies.
@@ -45,7 +45,7 @@ New accounts are synced from Clerk on the first authenticated request if the web
 
 `vite-plugin-pwa` emits a versioned app-shell cache, `manifest.json`, PNG icons, and a service worker. An update prompt lets users choose when to reload. Only bundled public assets are cached; authenticated API responses, Clerk sessions, and private media are excluded. Already-loaded messages and drafts stay available in memory while offline; sending is disabled. A fresh offline launch displays the cached shell and a reconnect state. Signing in and loading history require a connection. Theme preference is the only app state persisted to local storage.
 
-- Android Chrome: use **Take murmur with you** or the browser's **Install app** menu.
+- Android Chrome: use **Get Chime for your device** or the browser's **Install app** menu.
 - iOS Safari: **Share → Add to Home Screen**.
 - Desktop Chrome/Edge: use the in-app install control or the address bar install icon.
 
@@ -63,7 +63,7 @@ npm test
 npm run build
 ```
 
-To use system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chromium` when running tests. Browser tests use a test-only Clerk adapter and mocked API data, plus a real local Socket.IO server for transport/reconnection checks. They cover desktop, Android-sized, and iPhone-sized layouts, retry/deduplication, search, contacts, theme, logout, offline sends, the service worker, and cache isolation. The test adapter is only referenced by `vite.test.config.js` and is excluded from the production bundle.
+To use system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chromium` when running tests. Browser tests use a test-only Clerk adapter and mocked API data, plus a real local Socket.IO server for transport/reconnection checks. They cover desktop, tablet, Android-sized, and iPhone-sized layouts, retry/deduplication, search, contacts, theme, keyboard focus, dialog dismissal, emoji popovers, logout, offline sends, the service worker, and cache isolation. The test adapter is only referenced by `vite.test.config.js` and is excluded from the production bundle.
 
 Live two-account testing is still needed against your configured Clerk, MongoDB, and ImageKit services. The tests do not create accounts or send messages to real users.
 

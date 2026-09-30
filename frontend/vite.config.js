@@ -4,6 +4,25 @@ import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "motion",
+              test: /node_modules\/(framer-motion|motion-dom|motion-utils)\//,
+            },
+            {
+              name: "primitives",
+              test: /node_modules\/(radix-ui|@radix-ui)\//,
+            },
+            { name: "auth", test: /node_modules\/@clerk\// },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -13,14 +32,14 @@ export default defineConfig({
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       manifest: {
         id: "/",
-        name: "Murmur — A little closer",
-        short_name: "Murmur",
+        name: "Chime — A little more connected",
+        short_name: "Chime",
         description: "A quiet space for your everyday conversations.",
         start_url: "/",
         scope: "/",
         display: "standalone",
-        background_color: "#edf1f5",
-        theme_color: "#f4f6f8",
+        background_color: "#f5f6f3",
+        theme_color: "#f5f6f3",
         lang: "en",
         categories: ["social", "communication"],
         icons: [

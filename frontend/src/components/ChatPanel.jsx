@@ -1,4 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Popover } from "radix-ui";
+import { cn } from "../lib/utils";
 import {
   ArrowDown,
   ArrowLeft,
@@ -9,7 +12,8 @@ import {
   Info,
   LoaderCircle,
   MessageCircle,
-  Plus,
+  Keyboard,
+  Paperclip,
   Search,
   Smile,
   SquarePen,
@@ -18,32 +22,45 @@ import {
 } from "lucide-react";
 import { useChat } from "../stores/chat";
 import { dayLabel, messageDate, timeLabel } from "../lib/format";
-import { Avatar, ErrorNotice, IconButton, Modal, Spinner } from "./ui";
+import {
+  Avatar,
+  Button,
+  ErrorNotice,
+  IconButton,
+  Input,
+  Modal,
+  Spinner,
+  Textarea,
+} from "./ui";
 
 const EMPTY = [];
 export default function ChatPanel({ onNew }) {
   const activeId = useChat((state) => state.activeId);
   if (!activeId)
     return (
-      <section className="chat-empty">
-        <div className="empty-illustration">
-          <span className="empty-ring" />
-          <MessageCircle size={47} strokeWidth={1.4} />
-          <span className="empty-spark">
-            <Plus size={17} />
+      <section className="relative hidden min-w-0 flex-1 flex-col items-center justify-center bg-background/35 p-8 text-center md:flex">
+        <div className="relative mb-8 flex size-28 items-center justify-center rounded-[32px] border border-border/60 bg-surface/60 shadow-xs backdrop-blur-xl">
+          <MessageCircle size={42} strokeWidth={1.3} className="text-primary" />
+          <span className="absolute -right-4 bottom-2 flex size-11 items-center justify-center rounded-2xl border bg-accent/70 text-accent-foreground shadow-sm backdrop-blur-xl">
+            <Smile size={23} strokeWidth={1.5} />
           </span>
         </div>
-        <div className="eyebrow">ROOM FOR A LITTLE HELLO</div>
-        <h2>Your people. Your conversations.</h2>
-        <p>
-          Pick up where you left off,
-          <br />
-          or start something new.
+        <span className="mb-4 rounded-full border bg-surface/60 px-3 py-1.5 text-[10px] font-medium tracking-wide text-muted-foreground">
+          A SPACE FOR YOUR PEOPLE
+        </span>
+        <h2 className="text-2xl font-medium tracking-tight">
+          A good day starts with hello.
+        </h2>
+        <p className="mt-3 max-w-64 text-sm leading-6 text-muted-foreground">
+          Pick a conversation, or reach out to someone new.
         </p>
-        <button className="primary-button" onClick={onNew}>
-          <SquarePen size={17} /> New message
-        </button>
-        <span className="empty-footnote">Small moments, shared.</span>
+        <Button className="mt-7" onClick={onNew}>
+          <SquarePen size={16} />
+          New message
+        </Button>
+        <span className="absolute bottom-7 text-[11px] text-muted-foreground">
+          Stay close, even from a little further away.
+        </span>
       </section>
     );
   return <Conversation key={activeId} id={activeId} />;
@@ -77,7 +94,9 @@ function Conversation({ id }) {
   const scrollBottom = () => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
     });
     setNewBelow(false);
   };
@@ -92,7 +111,7 @@ function Conversation({ id }) {
         scrollSnapshot.current.top;
       scrollSnapshot.current = null;
     } else if (nearBottom.current) element.scrollTop = element.scrollHeight;
-  }, [messages]);
+  }, [messages, query]);
   useEffect(() => {
     if (!nearBottom.current && lastId) {
       const timer = setTimeout(() => setNewBelow(true), 0);
@@ -109,30 +128,35 @@ function Conversation({ id }) {
     if (useChat.getState().errors[id]) scrollSnapshot.current = null;
   }
   return (
-    <section
-      className="chat-panel"
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background/25"
       aria-label={`Conversation with ${user?.fullName || "contact"}`}
     >
-      <header className="chat-header glass">
+      <header className="safe-top z-10 flex min-h-[81px] shrink-0 items-center gap-3 border-b bg-surface/65 px-3 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
         <IconButton
           label="Back to conversations"
-          className="mobile-back"
+          className="md:hidden"
           onClick={useChat.getState().clearSelection}
         >
           <ArrowLeft size={21} />
         </IconButton>
         <Avatar user={user} size="avatar-small" online={online} />
-        <button className="contact-heading" onClick={() => setDetails(true)}>
+        <button
+          className="min-w-0 text-left [&>strong]:block [&>strong]:truncate [&>strong]:text-sm [&>strong]:font-semibold [&>span]:mt-1 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:text-[11px] [&>span]:text-muted-foreground"
+          onClick={() => setDetails(true)}
+        >
           <strong>{user?.fullName}</strong>
           <span>
-            {online ? "Online now" : "A space for your conversation"}
+            {online ? "Online now" : "Offline"}
             <ChevronDown size={11} />
           </span>
         </button>
-        <div className="chat-header-actions">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <IconButton
             label="Search this conversation"
-            className={searching ? "is-active" : ""}
+            className={searching ? "bg-accent text-accent-foreground" : ""}
             onClick={() => {
               setSearching(!searching);
               setQuery("");
@@ -148,30 +172,41 @@ function Conversation({ id }) {
           </IconButton>
         </div>
       </header>
-      {searching && (
-        <div className="message-search">
-          <Search size={16} />
-          <input
-            autoFocus
-            aria-label="Search loaded messages"
-            placeholder="Search loaded messages…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <span>{query && `${matches.length} found`}</span>
-          <IconButton
-            label="Close message search"
-            onClick={() => {
-              setSearching(false);
-              setQuery("");
-            }}
+      <AnimatePresence>
+        {searching && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-2 border-b bg-surface/50 px-4 py-2 text-muted-foreground sm:px-7 [&>span]:shrink-0 [&>span]:text-xs"
           >
-            <X size={16} />
-          </IconButton>
-        </div>
-      )}
+            <Search size={16} />
+            <Input
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+              autoFocus
+              aria-label="Search loaded messages"
+              placeholder="Search loaded messages…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <span>{query && `${matches.length} found`}</span>
+            <IconButton
+              label="Close message search"
+              onClick={() => {
+                setSearching(false);
+                setQuery("");
+              }}
+            >
+              <X size={16} />
+            </IconButton>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {(!networkOnline || connection !== "connected") && (
-        <div className="connection-banner" role="status">
+        <div
+          className="flex shrink-0 items-center justify-center gap-2 border-b bg-accent/55 px-4 py-2.5 text-xs text-accent-foreground [&>button]:font-semibold [&>button]:underline [&>button]:underline-offset-4"
+          role="status"
+        >
           {!networkOnline ? (
             <WifiOff size={14} />
           ) : (
@@ -188,7 +223,7 @@ function Conversation({ id }) {
         </div>
       )}
       <div
-        className="message-scroll"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7 lg:px-10"
         ref={scrollRef}
         onScroll={() => {
           const el = scrollRef.current;
@@ -197,13 +232,17 @@ function Conversation({ id }) {
           if (nearBottom.current) setNewBelow(false);
         }}
       >
-        <div className="conversation-beginning">
+        <div className="flex flex-col items-center pb-8 pt-3 text-center [&>h2]:mt-3 [&>h2]:text-sm [&>h2]:font-semibold [&>p]:mt-1.5 [&>p]:text-xs [&>p]:text-muted-foreground">
           <Avatar user={user} size="avatar-large" />
           <h2>{user?.fullName}</h2>
-          <p>A little hello could be the start of something good.</p>
+          <p>This is the beginning of your conversation.</p>
         </div>
         {hasMore && (
-          <button className="load-older" onClick={loadOlder} disabled={loading}>
+          <button
+            className="mx-auto mb-5 block rounded-full border bg-surface/70 px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            onClick={loadOlder}
+            disabled={loading}
+          >
             {loading ? "Loading…" : "Load earlier messages"}
           </button>
         )}
@@ -216,7 +255,7 @@ function Conversation({ id }) {
         {loading && !messages.length ? (
           <Spinner label="Loading your conversation…" />
         ) : !messages.length && !error ? (
-          <div className="first-message">
+          <div className="flex flex-col items-center gap-4 py-10 text-sm text-muted-foreground [&>button]:flex [&>button]:items-center [&>button]:gap-2 [&>button]:rounded-full [&>button]:border [&>button]:bg-surface/70 [&>button]:px-4 [&>button]:py-2.5 [&>button]:text-xs [&>button]:text-primary">
             <span>Every conversation starts somewhere.</span>
             <button
               onClick={() => {
@@ -229,7 +268,7 @@ function Conversation({ id }) {
           </div>
         ) : (
           <div
-            className="message-list"
+            className="mx-auto max-w-[920px]"
             role="log"
             aria-label="Messages"
             aria-live="polite"
@@ -245,25 +284,38 @@ function Conversation({ id }) {
               return (
                 <Fragment key={message._id}>
                   {showDay && (
-                    <div className="date-separator">
+                    <div className="flex items-center gap-4 py-5 text-center text-[10px] font-medium text-muted-foreground before:h-px before:flex-1 before:bg-border/60 after:h-px after:flex-1 after:bg-border/60 [&>span]:rounded-full [&>span]:border [&>span]:bg-surface/50 [&>span]:px-3 [&>span]:py-1.5">
                       <span>{dayLabel(message)}</span>
                     </div>
                   )}
-                  <div
-                    className={`message-row ${mine ? "mine" : "theirs"} ${grouped ? "grouped" : ""}`}
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={cn(
+                      "flex flex-col",
+                      mine ? "items-end" : "items-start",
+                      grouped ? "mt-2" : "mt-5",
+                    )}
                   >
                     <div
-                      className={`message-bubble ${message.status === "failed" ? "failed" : ""}`}
+                      className={cn(
+                        "max-w-[85%] overflow-hidden rounded-[22px] border px-4 py-3 text-[13px] leading-[1.75] sm:max-w-[75%] sm:text-sm [&>p]:whitespace-pre-wrap [&>p]:break-words [&>p]:[overflow-wrap:anywhere] [&>a+p]:mt-2 [&>video+p]:mt-2",
+                        mine
+                          ? "rounded-br-md border-primary/10 bg-primary text-primary-foreground"
+                          : "rounded-bl-md border-border/80 bg-surface/80 shadow-xs backdrop-blur-sm",
+                        message.status === "failed" &&
+                          "ring-1 ring-destructive",
+                      )}
                     >
                       {message.image && (
                         <a
                           href={message.image}
                           target="_blank"
                           rel="noreferrer"
-                          className="message-image-link"
+                          className="block text-inherit"
                         >
                           <img
-                            className="message-image"
+                            className="max-h-80 min-h-16 max-w-full rounded-2xl object-contain"
                             src={message.image}
                             alt={`Photo shared by ${mine ? "you" : user?.fullName}`}
                             loading="lazy"
@@ -284,19 +336,19 @@ function Conversation({ id }) {
                           src={message.video}
                           controls
                           preload="metadata"
-                          className="message-video"
+                          className="max-h-80 max-w-full rounded-2xl"
                           aria-label="Shared video"
                         />
                       )}
                       {message.file && !message.image && !message.video && (
-                        <span className="pending-attachment">
+                        <span className="mb-1 flex items-center gap-2 break-all text-xs">
                           <ImagePlus size={16} />
                           {message.file.name}
                         </span>
                       )}
                       {message.text && <p>{message.text}</p>}
                     </div>
-                    <div className="message-meta">
+                    <div className="flex items-center gap-1 px-1 pt-1.5 text-[10px] text-muted-foreground [&>button]:rounded-full [&>button]:px-1 [&>button]:text-destructive [&>button]:underline">
                       <time dateTime={messageDate(message)?.toISOString()}>
                         {timeLabel(message)}
                       </time>
@@ -326,22 +378,30 @@ function Conversation({ id }) {
                         ))}
                     </div>
                     {message.status === "failed" && (
-                      <span className="message-error" role="alert">
+                      <span
+                        className="max-w-[85%] pt-1 text-right text-xs text-destructive"
+                        role="alert"
+                      >
                         {message.error}
                       </span>
                     )}
-                  </div>
+                  </motion.div>
                 </Fragment>
               );
             })}
             {query && !matches.length && (
-              <div className="no-messages">No messages match “{query}”.</div>
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No messages match “{query}”.
+              </div>
             )}
           </div>
         )}
       </div>
       {newBelow && (
-        <button className="new-below" onClick={scrollBottom}>
+        <button
+          className="absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-surface/85 px-4 py-2.5 text-xs shadow-sm backdrop-blur-xl"
+          onClick={scrollBottom}
+        >
           Latest messages <ArrowDown size={14} />
         </button>
       )}
@@ -353,12 +413,12 @@ function Conversation({ id }) {
       />
       {details && (
         <Modal title="Conversation details" onClose={() => setDetails(false)}>
-          <div className="profile-card">
+          <div className="flex flex-col items-center py-4 text-center [&>h3]:mt-4 [&>h3]:text-lg [&>h3]:font-semibold [&>p]:mt-1 [&>p]:text-xs [&>p]:text-muted-foreground">
             <Avatar user={user} size="avatar-large" />
             <h3>{user?.fullName}</h3>
             <p>{online ? "Online now" : "Currently offline"}</p>
           </div>
-          <div className="settings-section">
+          <div className="mt-5 border-t pt-5 [&>h3]:text-sm [&>h3]:font-medium [&>p]:mt-2 [&>p]:text-xs [&>p]:leading-relaxed [&>p]:text-muted-foreground">
             <h3>Shared in this conversation</h3>
             <p>
               {
@@ -367,7 +427,7 @@ function Conversation({ id }) {
               }{" "}
               photos and videos in loaded messages
             </p>
-            <div className="shared-media">
+            <div className="mt-4 grid grid-cols-3 gap-2 [&_img]:aspect-square [&_img]:w-full [&_img]:rounded-xl [&_img]:object-cover">
               {messages
                 .filter((message) => message.image)
                 .map((message) => (
@@ -385,14 +445,14 @@ function Conversation({ id }) {
                   </a>
                 ))}
             </div>
-            <p className="privacy-note">
+            <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
               Message status confirms the server saved your message. Read
               receipts aren’t available.
             </p>
           </div>
         </Modal>
       )}
-    </section>
+    </motion.section>
   );
 }
 
@@ -405,7 +465,6 @@ function Composer({ id, onSend }) {
   const [emojis, setEmojis] = useState(false);
   const inputRef = useRef(null);
   const fileRef = useRef(null);
-  const emojiRef = useRef(null);
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -420,21 +479,6 @@ function Composer({ id, onSend }) {
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
   }, [text]);
-  useEffect(() => {
-    if (!emojis) return;
-    const close = (event) => {
-      if (!emojiRef.current?.contains(event.target)) setEmojis(false);
-    };
-    const escape = (event) => {
-      if (event.key === "Escape") setEmojis(false);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [emojis]);
   function chooseFile(selected) {
     if (!selected) return;
     if (
@@ -465,10 +509,10 @@ function Composer({ id, onSend }) {
     inputRef.current.focus();
   }
   return (
-    <div className="composer-area glass">
+    <div className="safe-bottom z-10 shrink-0 border-t border-border/60 bg-surface/50 px-3 pt-3 backdrop-blur-xl sm:px-6 sm:pt-4 lg:px-8">
       {error && <ErrorNotice message={error} />}
       {file && (
-        <div className="attachment-preview">
+        <div className="mb-3 flex max-w-sm items-center gap-3 rounded-2xl border bg-surface/80 p-3 [&>img]:size-11 [&>img]:rounded-lg [&>img]:object-cover [&>span]:min-w-0 [&>span]:flex-1 [&_strong]:block [&_strong]:truncate [&_strong]:text-xs [&_strong]:font-medium [&_small]:mt-1 [&_small]:block [&_small]:text-[11px] [&_small]:text-muted-foreground">
           {file.type.startsWith("image/") && fileUrl ? (
             <img src={fileUrl} alt="Attachment preview" />
           ) : (
@@ -489,7 +533,10 @@ function Composer({ id, onSend }) {
           </IconButton>
         </div>
       )}
-      <form className="composer" onSubmit={send}>
+      <form
+        className="flex items-end gap-1 rounded-[28px] border bg-surface/75 p-2 shadow-xs backdrop-blur-xl transition-shadow focus-within:border-ring/70 focus-within:ring-2 focus-within:ring-ring/10 sm:gap-2"
+        onSubmit={send}
+      >
         <input
           type="file"
           ref={fileRef}
@@ -506,15 +553,16 @@ function Composer({ id, onSend }) {
           label="Attach a photo or video"
           onClick={() => fileRef.current.click()}
         >
-          <Plus size={23} />
+          <Paperclip size={20} />
         </IconButton>
-        <textarea
+        <Textarea
+          className="max-h-[140px] min-h-10 py-2"
           id="message-input"
           ref={inputRef}
           rows={1}
           maxLength={5000}
           aria-label="Message"
-          placeholder="A thought, a little hello…"
+          placeholder="Write a message…"
           value={text}
           onChange={(event) =>
             useChat.getState().setDraft(id, event.target.value)
@@ -536,16 +584,24 @@ function Composer({ id, onSend }) {
             }
           }}
         />
-        <div ref={emojiRef} className="emoji-container">
-          <IconButton
-            label="Choose an emoji"
-            aria-expanded={emojis}
-            onClick={() => setEmojis(!emojis)}
-          >
-            <Smile size={21} />
-          </IconButton>
-          {emojis && (
-            <div className="emoji-picker" role="group" aria-label="Emoji">
+        <Popover.Root open={emojis} onOpenChange={setEmojis}>
+          <Popover.Trigger asChild>
+            <IconButton label="Choose an emoji" aria-expanded={emojis}>
+              <Smile size={21} />
+            </IconButton>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              side="top"
+              align="end"
+              sideOffset={12}
+              aria-label="Emoji"
+              className="z-40 grid grid-cols-4 gap-1 rounded-2xl border bg-surface/90 p-2 shadow-lg outline-none backdrop-blur-2xl animate-popover"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                inputRef.current?.focus();
+              }}
+            >
               {[
                 ["😊", "Smiling face"],
                 ["❤️", "Heart"],
@@ -558,6 +614,7 @@ function Composer({ id, onSend }) {
               ].map(([emoji, name]) => (
                 <button
                   type="button"
+                  className="flex size-11 items-center justify-center rounded-xl text-2xl transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                   key={name}
                   aria-label={name}
                   onClick={() => {
@@ -571,11 +628,11 @@ function Composer({ id, onSend }) {
                   {emoji}
                 </button>
               ))}
-            </div>
-          )}
-        </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
         <button
-          className="send-button"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground"
           type="submit"
           aria-label="Send message"
           disabled={(!text.trim() && !file) || !online}
@@ -583,17 +640,17 @@ function Composer({ id, onSend }) {
           <ArrowUp size={21} strokeWidth={2.5} />
         </button>
       </form>
-      <div className="composer-caption">
+      <div className="flex min-h-7 items-center justify-between gap-2 px-3 pt-2 text-[10px] text-muted-foreground">
         <span>
           {!online
             ? "Reconnect to send. Your draft is safe in this session."
-            : "A little closer, one message at a time."}
+            : "Just you and your conversation."}
         </span>
         {text.length > 4500 ? (
           <span>{text.length}/5000</span>
         ) : (
-          <span className="keyboard-tip">
-            Return to send <span>↵</span>
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <Keyboard size={12} /> Shift + Enter for a new line
           </span>
         )}
       </div>

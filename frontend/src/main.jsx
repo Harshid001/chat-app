@@ -1,38 +1,25 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/react";
-import App, { Appearance } from "./App";
-import AuthScreen from "./components/AuthScreen";
+import { MotionConfig } from "framer-motion";
+import { Tooltip } from "radix-ui";
+import { Appearance } from "./App";
+import Chime from "./Chime";
 import { ErrorBoundary } from "./components/ui";
-import { PwaUpdates } from "./components/Pwa";
 import "./index.css";
 
-const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <ErrorBoundary>
-      <Appearance>
-        {key ? (
-          <ClerkProvider
-            publishableKey={key}
-            appearance={{
-              variables: {
-                colorPrimary: "#2879ed",
-                borderRadius: "16px",
-                fontFamily:
-                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              },
-            }}
-          >
-            <App />
-          </ClerkProvider>
-        ) : (
-          <>
-            <AuthScreen configured={false} />
-            <PwaUpdates />
-          </>
-        )}
-      </Appearance>
-    </ErrorBoundary>
+    <MotionConfig
+      reducedMotion="user"
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <Tooltip.Provider delayDuration={350}>
+        <ErrorBoundary>
+          <Appearance>
+            <Chime />
+          </Appearance>
+        </ErrorBoundary>
+      </Tooltip.Provider>
+    </MotionConfig>
   </StrictMode>,
 );

@@ -1,17 +1,29 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
-  Circle,
+  ArrowUpRight,
+  ChevronDown,
   MessageCircle,
   Search,
-  Settings2,
   SquarePen,
   X,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useChat } from "../stores/chat";
-import { Avatar, Brand, ErrorNotice, IconButton, Spinner } from "./ui";
+import {
+  Avatar,
+  Brand,
+  Button,
+  ErrorNotice,
+  IconButton,
+  Input,
+  SegmentedControl,
+  Spinner,
+  ThemeMenu,
+} from "./ui";
 import { InstallButton } from "./Pwa";
 import { preview, timeLabel } from "../lib/format";
+import { cn } from "../lib/utils";
 
 export default function Sidebar({ onNew, onSettings }) {
   const [query, setQuery] = useState("");
@@ -56,57 +68,83 @@ export default function Sidebar({ onNew, onSettings }) {
   );
   return (
     <aside
-      className={`sidebar glass ${state.activeId ? "mobile-hidden" : ""}`}
       aria-label="Conversations"
+      className={cn(
+        "flex min-h-0 w-full flex-1 flex-col bg-sidebar/80 backdrop-blur-2xl md:w-72 md:flex-none md:border-r lg:w-80 xl:w-[340px]",
+        state.activeId && "hidden md:flex",
+      )}
     >
-      <div className="sidebar-top">
-        <Brand small />
-        <span className="workspace-label">YOUR SPACE</span>
+      <div className="safe-top">
+        <div className="flex items-center justify-between px-5 pb-5 pt-5 md:px-6 md:pt-7">
+          <Brand small />
+          <div className="md:hidden">
+            <ThemeMenu />
+          </div>
+          <span className="hidden rounded-md border bg-surface px-2 py-1 text-[10px] font-medium tracking-wide text-muted-foreground md:inline-flex">
+            PERSONAL
+          </span>
+        </div>
       </div>
-      <div className="sidebar-heading">
+      <div className="flex items-center justify-between px-5 pb-5 md:px-6">
         <div>
-          <h1>
-            Messages<span className="heading-dot">.</span>
-          </h1>
-          <p>A little hello goes a long way.</p>
+          <h1 className="text-2xl font-semibold tracking-[-.8px]">Messages</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your everyday conversations.
+          </p>
         </div>
         <IconButton
-          className="compose-button"
           label="New message"
           onClick={onNew}
+          className="border bg-surface text-foreground shadow-xs"
         >
-          <SquarePen size={20} />
+          <SquarePen size={18} />
         </IconButton>
       </div>
-      <div className="search-field">
-        <Search size={17} />
-        <input
+      <div className="relative mx-5 md:mx-6">
+        <Search
+          size={16}
+          className="pointer-events-none absolute left-3.5 top-3.5 z-10 text-muted-foreground"
+        />
+        <Input
           aria-label="Search conversations"
+          placeholder="Search conversations"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search conversations"
+          className="bg-background pl-10 pr-10"
         />
         {query && (
-          <IconButton label="Clear search" onClick={() => setQuery("")}>
+          <IconButton
+            label="Clear search"
+            onClick={() => setQuery("")}
+            className="absolute right-1 top-0.5"
+          >
             <X size={15} />
           </IconButton>
         )}
       </div>
-      <div className="conversation-filters">
-        <button
-          className={filter === "all" ? "active" : ""}
-          onClick={() => setFilter("all")}
-        >
-          All messages <span>{state.conversations.length}</span>
-        </button>
-        <button
-          className={filter === "unread" ? "active" : ""}
-          onClick={() => setFilter("unread")}
-        >
-          Unread {unreadCount > 0 && <span>{unreadCount}</span>}
-        </button>
+      <SegmentedControl
+        className="mx-5 my-4 md:mx-6"
+        label="Filter conversations"
+        value={filter}
+        onChange={setFilter}
+        options={[
+          {
+            value: "all",
+            label: "All messages",
+            count: state.conversations.length,
+          },
+          { value: "unread", label: "Unread", count: unreadCount },
+        ]}
+      />
+      <div className="flex items-center justify-between px-6 pb-2 pt-2 text-[10px] font-medium uppercase tracking-[.1em] text-muted-foreground">
+        <span>
+          {filter === "unread"
+            ? "Unread conversations"
+            : "Recent conversations"}
+        </span>
+        <span>{conversations.length}</span>
       </div>
-      <div className="conversation-list">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4">
         {state.listError && (
           <ErrorNotice
             message={state.listError}
@@ -114,34 +152,47 @@ export default function Sidebar({ onNew, onSettings }) {
           />
         )}
         {state.listLoading && !state.conversations.length ? (
-          <Spinner label="Finding your conversations…" />
+          <Spinner label="Loading conversations…" />
         ) : conversations.length ? (
           conversations.map((user) => (
             <button
               key={user._id}
-              className={`conversation-row ${state.activeId === user._id ? "selected" : ""}`}
               onClick={() => state.selectConversation(user)}
               aria-current={state.activeId === user._id ? "true" : undefined}
+              className={cn(
+                "group relative my-1 flex w-full items-center gap-3 rounded-xl p-3.5 text-left transition-colors hover:bg-muted/70",
+                state.activeId === user._id && "bg-accent hover:bg-accent",
+              )}
             >
+              {state.activeId === user._id && (
+                <motion.span
+                  layoutId="selected-conversation"
+                  className="absolute left-0 h-7 w-[3px] rounded-r-full bg-primary"
+                  transition={{ type: "spring", stiffness: 450, damping: 40 }}
+                />
+              )}
               <Avatar
-                key={user.profilePic}
                 user={user}
                 online={state.onlineUsers.includes(user._id)}
               />
-              <span className="conversation-copy">
-                <span className="conversation-title">
-                  <strong>{user.fullName}</strong>
-                  <time>{timeLabel(user.lastMessage)}</time>
+              <span className="min-w-0 flex-1">
+                <span className="mb-1.5 flex items-center gap-2">
+                  <strong className="flex-1 truncate text-[13px] font-semibold">
+                    {user.fullName}
+                  </strong>
+                  <time className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                    {timeLabel(user.lastMessage)}
+                  </time>
                 </span>
-                <span className="conversation-preview-text">
-                  <span>
+                <span className="flex items-center gap-2">
+                  <span className="flex-1 truncate text-xs leading-5 text-muted-foreground">
                     {user.lastMessage?.senderId === state.profile?._id
                       ? "You: "
                       : ""}
                     {preview(user.lastMessage)}
                   </span>
                   {state.unread[user._id] > 0 && (
-                    <span className="unread-badge">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                       {state.unread[user._id] > 99
                         ? "99+"
                         : state.unread[user._id]}
@@ -152,57 +203,68 @@ export default function Sidebar({ onNew, onSettings }) {
             </button>
           ))
         ) : (
-          <div className="sidebar-empty">
-            <MessageCircle size={28} />
-            <h3>
+          <div className="flex flex-col items-center px-6 py-14 text-center">
+            <span className="mb-4 rounded-2xl border bg-surface p-3 text-muted-foreground">
+              <MessageCircle size={23} strokeWidth={1.5} />
+            </span>
+            <h3 className="text-sm font-medium">
               {query
                 ? "No conversations found"
                 : filter === "unread"
                   ? "You’re all caught up"
-                  : "Make the first move"}
+                  : "A fresh start"}
             </h3>
-            <p>
+            <p className="mt-2 max-w-52 text-xs leading-relaxed text-muted-foreground">
               {query
-                ? "Try a different name."
+                ? "Try searching for another name."
                 : filter === "unread"
-                  ? "Your unread messages will appear here."
-                  : "A good conversation starts with hello."}
+                  ? "New messages will appear here."
+                  : "Find a friend and start your first conversation."}
             </p>
             {!query && filter === "all" && (
-              <button className="text-button" onClick={onNew}>
-                Start a conversation <SquarePen size={15} />
-              </button>
+              <Button
+                variant="ghost"
+                size="small"
+                className="mt-4 text-primary"
+                onClick={onNew}
+              >
+                Start a conversation
+                <ArrowUpRight size={14} />
+              </Button>
             )}
           </div>
         )}
       </div>
-      <div className="sidebar-bottom">
+      <div className="safe-bottom border-t px-4 pt-3">
         <InstallButton />
-        <div className="account-row">
-          <button className="account-button" onClick={onSettings}>
-            <Avatar user={state.profile} size="avatar-small" />
-            <span>
-              <strong>{state.profile?.fullName}</strong>
-              <small>
-                <Circle
-                  size={7}
-                  fill="currentColor"
-                  className={
-                    state.connection === "connected" ? "text-green" : ""
-                  }
-                />
-                {!state.networkOnline
-                  ? "Offline"
-                  : state.connection === "connected"
-                    ? "Connected"
-                    : "Connecting"}
-              </small>
+        <button
+          onClick={onSettings}
+          aria-label="Account and appearance"
+          className="mt-2 flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-muted"
+        >
+          <Avatar user={state.profile} size="avatar-small" />
+          <span className="min-w-0 flex-1">
+            <strong className="block truncate text-xs font-semibold">
+              {state.profile?.fullName}
+            </strong>
+            <span className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  state.connection === "connected"
+                    ? "bg-status"
+                    : "bg-muted-foreground",
+                )}
+              />
+              {!state.networkOnline
+                ? "Offline"
+                : state.connection === "connected"
+                  ? "Connected"
+                  : "Connecting"}
             </span>
-          </button>
-          <IconButton label="Account and appearance" onClick={onSettings}>
-            <Settings2 size={19} />
-          </IconButton>
-        </div>
+          </span>
+          <ChevronDown size={15} className="text-muted-foreground" />
+        </button>
       </div>
     </aside>
   );

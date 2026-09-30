@@ -5,26 +5,26 @@ import AuthScreen from "./components/AuthScreen";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import { NewConversation, Settings } from "./components/Dialogs";
-import { Brand, ErrorNotice, Spinner } from "./components/ui";
+import {
+  Brand,
+  ErrorNotice,
+  IconButton,
+  Spinner,
+  ThemeMenu,
+} from "./components/ui";
 import { PwaUpdates } from "./components/Pwa";
 import { serverUrl, setTokenProvider } from "./lib/api";
 import { useChat } from "./stores/chat";
-import { usePreferences } from "./stores/preferences";
+import { useEffectiveTheme } from "./lib/useEffectiveTheme";
+import { MessageCircle, Settings2, SquarePen } from "lucide-react";
 
 export function Appearance({ children }) {
-  const theme = usePreferences((state) => state.theme);
+  const theme = useEffectiveTheme();
   useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => {
-      const dark = theme === "dark" || (theme === "system" && media.matches);
-      document.documentElement.dataset.theme = dark ? "dark" : "light";
-      document
-        .querySelector('meta[name="theme-color"]')
-        ?.setAttribute("content", dark ? "#151b24" : "#f4f6f8");
-    };
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#131715" : "#f5f6f3");
   }, [theme]);
   return children;
 }
@@ -133,14 +133,14 @@ export default function App() {
     );
   if (!isLoaded)
     return (
-      <main className="boot-screen">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
         <Brand />
         <Spinner label="Making a little room for you…" />
-        <p className="muted text-sm">
+        <p className="text-sm text-muted-foreground">
           If this takes a while, check your connection.
         </p>
         <button
-          className="text-button"
+          className="rounded-full border bg-surface px-5 py-2.5 text-sm"
           onClick={() => window.location.reload()}
         >
           Reload
@@ -156,7 +156,7 @@ export default function App() {
     );
   if (!profile)
     return (
-      <main className="boot-screen">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
         <Brand />
         {booting ? (
           <Spinner label="Getting your conversations ready…" />
@@ -169,22 +169,45 @@ export default function App() {
       </main>
     );
   return (
-    <main className="app-page">
-      <div className="app-caption">
-        <span>FOR THE EVERYDAY & THE IN-BETWEEN</span>
-        <span>YOUR PEOPLE, A LITTLE CLOSER.</span>
-      </div>
-      <div className="app-shell">
+    <main className="h-dvh bg-background md:p-4 lg:p-6">
+      <div className="mx-auto flex h-full max-w-[1600px] overflow-hidden bg-surface/60 md:rounded-[26px] md:border md:shadow-[0_8px_40px_-24px_rgba(20,40,26,.15)]">
+        <nav
+          aria-label="Main navigation"
+          className="hidden w-[68px] shrink-0 flex-col items-center border-r bg-surface/60 py-6 backdrop-blur-2xl md:flex"
+        >
+          <Brand small iconOnly />
+          <div className="mt-9 flex flex-col gap-3">
+            <IconButton
+              label="Messages"
+              aria-current="page"
+              onClick={useChat.getState().clearSelection}
+              className="bg-accent text-accent-foreground"
+            >
+              <MessageCircle size={20} />
+            </IconButton>
+            <IconButton
+              label="Compose a message"
+              onClick={() => setDialog("new")}
+            >
+              <SquarePen size={19} />
+            </IconButton>
+          </div>
+          <div className="mt-auto flex flex-col gap-3">
+            <ThemeMenu />
+            <IconButton
+              label="Open preferences"
+              onClick={() => setDialog("settings")}
+            >
+              <Settings2 size={19} />
+            </IconButton>
+          </div>
+        </nav>
         <Sidebar
           onNew={() => setDialog("new")}
           onSettings={() => setDialog("settings")}
         />
         <ChatPanel onNew={() => setDialog("new")} />
       </div>
-      <footer className="app-footer">
-        <span>Small moments. Real connections.</span>
-        <span>murmur.</span>
-      </footer>
       {dialog === "new" && <NewConversation onClose={() => setDialog(null)} />}
       {dialog === "settings" && <Settings onClose={() => setDialog(null)} />}
       <PwaUpdates />
