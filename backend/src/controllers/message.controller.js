@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("../models/user.model");
 const Message = require("../models/message.model");
-const { hasImageKitConfig, uploadChatMedia } = require("../lib/imagekit");
+const { uploadChatMedia } = require("../lib/imagekit");
 const { io, userRoom } = require("../lib/socket");
 
 const publicUser = "_id fullName profilePic";
@@ -107,12 +107,6 @@ async function sendMessage(req, res, next) {
         .json({ message: "This account is no longer available." });
     const media = {};
     if (req.file) {
-      if (!hasImageKitConfig())
-        return res
-          .status(503)
-          .json({
-            message: "Media uploads are unavailable. You can still send text.",
-          });
       media[req.file.mimetype.startsWith("video/") ? "video" : "image"] =
         await uploadChatMedia(req.file);
     }

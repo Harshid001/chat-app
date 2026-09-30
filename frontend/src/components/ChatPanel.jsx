@@ -8,7 +8,6 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
-  ImagePlus,
   Info,
   LoaderCircle,
   MessageCircle,
@@ -32,6 +31,8 @@ import {
   Spinner,
   Textarea,
 } from "./ui";
+
+import AttachmentUpload, { PendingAttachment } from "./AttachmentUpload";
 
 const EMPTY = [];
 export default function ChatPanel({ onNew }) {
@@ -303,8 +304,9 @@ function Conversation({ id }) {
                         mine
                           ? "rounded-br-md border-primary/10 bg-primary text-primary-foreground"
                           : "rounded-bl-md border-border/80 bg-surface/80 shadow-xs backdrop-blur-sm",
-                        message.status === "failed" &&
-                          "ring-1 ring-destructive",
+                        message.file &&
+                          "border-border/80 bg-surface/80 p-2 text-foreground shadow-xs backdrop-blur-xl [&>p]:px-2 [&>p]:pt-2",
+                        message.status === "failed" && "border-destructive/40",
                       )}
                     >
                       {message.image && (
@@ -341,10 +343,15 @@ function Conversation({ id }) {
                         />
                       )}
                       {message.file && !message.image && !message.video && (
-                        <span className="mb-1 flex items-center gap-2 break-all text-xs">
-                          <ImagePlus size={16} />
-                          {message.file.name}
-                        </span>
+                        <PendingAttachment
+                          message={message}
+                          online={networkOnline}
+                          onRetry={() =>
+                            useChat
+                              .getState()
+                              .send(id, message.text, message.file, message)
+                          }
+                        />
                       )}
                       {message.text && <p>{message.text}</p>}
                     </div>
@@ -353,6 +360,7 @@ function Conversation({ id }) {
                         {timeLabel(message)}
                       </time>
                       {mine &&
+                        !message.file &&
                         (message.status === "sending" ? (
                           <>
                             <LoaderCircle size={10} className="animate-spin" />
@@ -377,7 +385,7 @@ function Conversation({ id }) {
                           </>
                         ))}
                     </div>
-                    {message.status === "failed" && (
+                    {message.status === "failed" && !message.file && (
                       <span
                         className="max-w-[85%] pt-1 text-right text-xs text-destructive"
                         role="alert"
@@ -459,99 +467,52 @@ function Conversation({ id }) {
 function Composer({ id, onSend }) {
   const text = useChat((state) => state.drafts[id] || "");
   const online = useChat((state) => state.networkOnline);
-  const [file, setFile] = useState(null);
-  const [fileUrl, setFileUrl] = useState("");
-  const [error, setError] = useState("");
+  const [attachment, setAttachment] = useState(null);
   const [emojis, setEmojis] = useState(false);
   const inputRef = useRef(null);
-  const fileRef = useRef(null);
-  useEffect(() => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const timer = setTimeout(() => setFileUrl(url), 0);
-    return () => {
-      clearTimeout(timer);
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
+  const recipient = useChat(
+    (state) =>
+      state.conversations.find((person) => person._id === id)?.fullName,
+  );
   useEffect(() => {
     const input = inputRef.current;
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
   }, [text]);
-  function chooseFile(selected) {
-    if (!selected) return;
-    if (
-      !/^(image\/(jpeg|png|gif|webp|avif)|video\/(mp4|webm|quicktime))$/.test(
-        selected.type,
-      )
-    ) {
-      setError("Choose a JPG, PNG, GIF, WebP, AVIF, MP4, WebM, or MOV file.");
-      return;
-    }
-    if (selected.size > 25 * 1024 * 1024) {
-      setError("Choose a file smaller than 25 MB.");
-      return;
-    }
-    setFileUrl("");
-    setFile(selected);
-    setError("");
-  }
   function send(event) {
     event?.preventDefault();
-    if ((!text.trim() && !file) || !online) return;
+    if (!text.trim() || !online) return;
     onSend();
-    useChat.getState().send(id, text.trim(), file);
+    useChat.getState().send(id, text.trim());
     useChat.getState().setDraft(id, "");
-    setFile(null);
     setEmojis(false);
-    setError("");
     inputRef.current.focus();
   }
   return (
     <div className="safe-bottom z-10 shrink-0 border-t border-border/60 bg-surface/50 px-3 pt-3 backdrop-blur-xl sm:px-6 sm:pt-4 lg:px-8">
-      {error && <ErrorNotice message={error} />}
-      {file && (
-        <div className="mb-3 flex max-w-sm items-center gap-3 rounded-2xl border bg-surface/80 p-3 [&>img]:size-11 [&>img]:rounded-lg [&>img]:object-cover [&>span]:min-w-0 [&>span]:flex-1 [&_strong]:block [&_strong]:truncate [&_strong]:text-xs [&_strong]:font-medium [&_small]:mt-1 [&_small]:block [&_small]:text-[11px] [&_small]:text-muted-foreground">
-          {file.type.startsWith("image/") && fileUrl ? (
-            <img src={fileUrl} alt="Attachment preview" />
-          ) : (
-            <ImagePlus size={24} />
-          )}
-          <span>
-            <strong>{file.name}</strong>
-            <small>{(file.size / 1024 / 1024).toFixed(1)} MB</small>
-          </span>
-          <IconButton
-            label="Remove attachment"
-            onClick={() => {
-              setFile(null);
-              setFileUrl("");
-            }}
-          >
-            <X size={17} />
-          </IconButton>
-        </div>
+      {attachment && (
+        <AttachmentUpload
+          initialFile={attachment.file}
+          initialCaption={text}
+          recipient={recipient}
+          online={online}
+          onClose={() => setAttachment(null)}
+          onSend={(file, caption) => {
+            onSend();
+            useChat.getState().send(id, caption, file);
+            useChat.getState().setDraft(id, "");
+            setAttachment(null);
+            inputRef.current?.focus();
+          }}
+        />
       )}
       <form
         className="flex items-end gap-1 rounded-[28px] border bg-surface/75 p-2 shadow-xs backdrop-blur-xl transition-shadow focus-within:border-ring/70 focus-within:ring-2 focus-within:ring-ring/10 sm:gap-2"
         onSubmit={send}
       >
-        <input
-          type="file"
-          ref={fileRef}
-          className="sr-only"
-          tabIndex={-1}
-          aria-label="Attach a photo or video"
-          accept="image/jpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/webm,video/quicktime"
-          onChange={(event) => {
-            chooseFile(event.target.files[0]);
-            event.target.value = "";
-          }}
-        />
         <IconButton
           label="Attach a photo or video"
-          onClick={() => fileRef.current.click()}
+          onClick={() => setAttachment({})}
         >
           <Paperclip size={20} />
         </IconButton>
@@ -580,7 +541,7 @@ function Composer({ id, onSend }) {
             const pastedFile = event.clipboardData.files[0];
             if (pastedFile) {
               event.preventDefault();
-              chooseFile(pastedFile);
+              setAttachment({ file: pastedFile });
             }
           }}
         />
@@ -635,7 +596,7 @@ function Composer({ id, onSend }) {
           className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground"
           type="submit"
           aria-label="Send message"
-          disabled={(!text.trim() && !file) || !online}
+          disabled={!text.trim() || !online}
         >
           <ArrowUp size={21} strokeWidth={2.5} />
         </button>

@@ -46,20 +46,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api", (req, res) =>
   res.status(404).json({ message: "API endpoint not found." }),
 );
-app.use((error, req, res, next) => {
-  if (res.headersSent) return next(error);
-  console.error("Request failed:", error.message);
-  const uploadError =
-    error.name === "MulterError" || error.message?.includes("only image");
-  const status = uploadError ? 400 : error.status === 413 ? 413 : 500;
-  res.status(status).json({
-    message: uploadError
-      ? "Choose an image or video smaller than 25 MB."
-      : status === 413
-        ? "This upload is too large."
-        : "Something went wrong. Please try again.",
-  });
-});
+app.use(require("./middleware/error.middleware"));
 if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir));
   app.get("/{*any}", (req, res, next) => {

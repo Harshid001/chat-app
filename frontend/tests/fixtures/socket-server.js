@@ -1,6 +1,30 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 const server = createServer((req, res) => {
+  if (req.url === "/upload-failure") {
+    res.setHeader("Access-Control-Allow-Origin", "http://127.0.0.1:4174");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "authorization,content-type");
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      return res.end();
+    }
+    req.resume();
+    req.on("end", () =>
+      setTimeout(() => {
+        res.writeHead(503, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            code: "UPLOAD_UNAVAILABLE",
+            message:
+              "The upload service could not be reached. Your attachment is still here; try again shortly.",
+            retryable: true,
+          }),
+        );
+      }, 2000),
+    );
+    return;
+  }
   res.writeHead(200);
   res.end("socket fixture");
 });

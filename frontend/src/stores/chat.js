@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { io } from "socket.io-client";
-import { api, errorMessage, getSessionToken, serverUrl } from "../lib/api";
+import {
+  api,
+  errorMessage,
+  attachmentErrorMessage,
+  getSessionToken,
+  serverUrl,
+} from "../lib/api";
 
 let socket;
 let epoch = 0;
@@ -206,6 +212,14 @@ export const useChat = create((set, get) => ({
     const run = epoch;
     const clientMessageId =
       retryMessage?.clientMessageId || crypto.randomUUID();
+    if (
+      (get().messages[id] || []).some(
+        (message) =>
+          message.clientMessageId === clientMessageId &&
+          message.status === "sending",
+      )
+    )
+      return false;
     const optimistic = {
       _id: clientMessageId,
       clientMessageId,
@@ -214,6 +228,7 @@ export const useChat = create((set, get) => ({
       text,
       createdAt: new Date().toISOString(),
       status: "sending",
+      uploadProgress: 0,
       file,
     };
     set((state) => ({
@@ -240,6 +255,25 @@ export const useChat = create((set, get) => ({
         url: `/messages/send/${id}`,
         data: body,
         timeout: file ? 90000 : 30000,
+        onUploadProgress: file
+          ? (event) => {
+              if (run !== epoch) return;
+              const progress = event.total
+                ? Math.min(100, Math.round((event.loaded / event.total) * 100))
+                : 0;
+              set((state) => ({
+                messages: {
+                  ...state.messages,
+                  [id]: (state.messages[id] || []).map((message) =>
+                    message.clientMessageId === clientMessageId &&
+                    message.status === "sending"
+                      ? { ...message, uploadProgress: progress }
+                      : message,
+                  ),
+                },
+              }));
+            }
+          : undefined,
       });
       if (run !== epoch) return false;
       get().receive(data.newMessage);
@@ -251,7 +285,13 @@ export const useChat = create((set, get) => ({
             ...state.messages,
             [id]: (state.messages[id] || []).map((message) =>
               message.clientMessageId === clientMessageId && message.status
-                ? { ...message, status: "failed", error: errorMessage(error) }
+                ? {
+                    ...message,
+                    status: "failed",
+                    error: file
+                      ? attachmentErrorMessage(error)
+                      : errorMessage(error),
+                  }
                 : message,
             ),
           },

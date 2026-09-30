@@ -33,7 +33,7 @@ Set these runtime environment variables on Render:
 - `MONGO_URI`
 - `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` from the same Clerk instance
 - `CLERK_WEBHOOK_SIGNING_KEY` for `/api/webhooks/clerk`
-- `IMAGEKIT_KEY` if photo/video uploads are wanted
+- `IMAGEKIT_KEY` (ImageKit private API key) if photo/video uploads are wanted. `IMAGEKIT_PRIVATE_KEY` is also accepted and takes precedence when nonempty.
 
 Docker sets `VITE_API_URL` to an empty string, so API and Socket.IO use the page's origin. Express serves the SPA, including `/sign-in` and `/sign-up`, and the compiled `manifest.json` and service worker. Keep HTTPS and WebSocket upgrade support enabled at the proxy.
 
@@ -68,3 +68,11 @@ To use system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chromium` w
 Live two-account testing is still needed against your configured Clerk, MongoDB, and ImageKit services. The tests do not create accounts or send messages to real users.
 
 Implementation references: [Clerk authenticated requests](https://clerk.com/docs/guides/development/making-requests), [Vite PWA service worker registration](https://vite-pwa-org.netlify.app/guide/register-service-worker).
+
+## Attachment flow and troubleshooting
+
+`src/components/AttachmentUpload.jsx` provides the Radix dialog, file preview, drag and drop, format/size validation, caption, and upload status card. The composer opens it from the paperclip or a pasted image. Sending moves the file into the conversation with measured Axios upload progress, followed by an indeterminate processing state until the server confirms the message. Failures retain the attachment and caption in session memory; retry reuses the original message identifier. Reloading or signing out clears these unsent files.
+
+The server returns structured upload errors (`code`, `message`, `retryable`) for unsupported formats, the 25 MB limit, provider rejection, credentials, capacity, timeouts, and outages. Raw provider diagnostics and secrets are never returned to the browser. ImageKit requests have a 60-second timeout with automatic retries disabled; the frontend allows 90 seconds. `IMAGEKIT_KEY` remains compatible with the existing Render configuration. Use a private server key, with file upload access, from the correct ImageKit account. A successful local credential check does not establish the deployed configuration, and a failed local check does not establish a deployed failure.
+
+To diagnose a live issue, retry a small JPG/PNG after deployment and inspect the `/api/messages/send/:id` response code and the matching `Media provider failed` server log status. A 401/403 indicates provider authentication or access restrictions; 402/429 indicates capacity/rate restrictions. The new component displays the corresponding recovery advice. Provider integration tests exercise the actual ImageKit SDK with a mocked upstream fetch; browser tests exercise multipart transfer against a local HTTP fixture as well as error/retry flows. They do not verify your live ImageKit account.

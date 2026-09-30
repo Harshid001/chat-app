@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { test, expect } from "@playwright/test";
 import { io } from "socket.io-client";
 const self = {
@@ -359,4 +360,145 @@ test("Radix dialogs restore focus and emoji popovers work in dark mode", async (
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+const photo = {
+  name: "weekend.png",
+  mimeType: "image/png",
+  buffer: Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=",
+    "base64",
+  ),
+};
+test("attachment preview, processing, actionable failure and idempotent retry", async ({
+  page,
+}, info) => {
+  await mockApi(page);
+  const identifiers = [];
+  await page.route("**/api/messages/send/**", async (route) => {
+    const body = route.request().postData();
+    const clientMessageId = body.match(
+      /name="clientMessageId"\r\n\r\n([^\r]+)/,
+    )[1];
+    identifiers.push(clientMessageId);
+    expect(body).toContain('filename="weekend.png"');
+    expect(body).toContain("Weekend plans");
+    if (identifiers.length === 1) {
+      return route.continue({ url: "http://127.0.0.1:4175/upload-failure" });
+    }
+    return route.fulfill({
+      status: 201,
+      json: {
+        newMessage: {
+          _id: "680000000000000000000009",
+          senderId: self._id,
+          receiverId: friend._id,
+          clientMessageId,
+          text: "Weekend plans",
+          image: "data:image/png;base64," + photo.buffer.toString("base64"),
+          createdAt: new Date().toISOString(),
+        },
+      },
+    });
+  });
+  await openChat(page);
+  await page
+    .getByRole("textbox", { name: "Message", exact: true })
+    .fill("Weekend plans");
+  await page
+    .getByRole("button", { name: "Attach a photo or video", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Send attachment", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Choose attachment file").setInputFiles(photo);
+  await expect(page.getByAltText("Preview of weekend.png")).toBeVisible();
+  await expect(page.getByLabel("Caption (optional)")).toHaveValue(
+    "Weekend plans",
+  );
+  await page.screenshot({
+    path: `test-results/${info.project.name}-attachment-preview.png`,
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Send attachment", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByText("Processing attachment…", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("progressbar")).toBeVisible();
+  await expect(
+    page.getByText("Attachment not sent", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/The upload service could not be reached/),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `test-results/${info.project.name}-attachment-error.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Retry upload", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Retry upload", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("log").getByText("Weekend plans", { exact: true }),
+  ).toHaveCount(1);
+  await expect(page.getByAltText("Photo shared by you")).toBeVisible();
+  expect(identifiers).toHaveLength(2);
+  expect(identifiers[0]).toBe(identifiers[1]);
+});
+test("attachment validation, offline selection and keyboard dismissal", async ({
+  page,
+  context,
+}) => {
+  await mockApi(page);
+  await openChat(page);
+  const attach = page.getByRole("button", {
+    name: "Attach a photo or video",
+    exact: true,
+  });
+  await attach.focus();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("Choose attachment file").setInputFiles({
+    name: "photo.heic",
+    mimeType: "image/heic",
+    buffer: Buffer.from("not-supported"),
+  });
+  await expect(page.getByRole("alert")).toContainText(
+    "Export HEIC photos as JPG first",
+  );
+  await expect(
+    page.getByRole("button", { name: "Send attachment", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Choose attachment file")
+    .setInputFiles({ ...photo, buffer: Buffer.alloc(25 * 1024 * 1024 + 1) });
+  await expect(page.getByRole("alert")).toContainText("exceeds 25 MB");
+  await page
+    .getByLabel("Choose attachment file")
+    .setInputFiles({ ...photo, buffer: Buffer.alloc(0) });
+  await expect(page.getByRole("alert")).toContainText("file is empty");
+  await page.getByLabel("Choose attachment file").setInputFiles(photo);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await context.setOffline(true);
+  await expect(
+    page.getByRole("button", { name: "Send attachment", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText(/Reconnect to send; your selection/),
+  ).toBeVisible();
+  await context.setOffline(false);
+  await expect(
+    page.getByRole("button", { name: "Send attachment", exact: true }),
+  ).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(attach).toBeFocused();
 });
