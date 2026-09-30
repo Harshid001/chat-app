@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.js",
     "build": "rm -rf dist && cp -R src dist",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js"
@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clerk/backend": "^3.21.0",
     "@clerk/express": "^2.1.72",
     "@imagekit/nodejs": "^7.12.1",
     "cors": "^2.8.6",
@@ -24,5 +25,9 @@
     "multer": "^2.4.0",
     "nodemon": "^3.1.14",
     "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "mock-require": "^3.0.3",
+    "supertest": "^7.3.0"
   }
 }

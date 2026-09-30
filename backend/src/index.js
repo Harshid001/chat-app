@@ -1,51 +1,77 @@
 //dotenv config
-require('dotenv').config();
+require("dotenv").config();
 
 //express
-const express = require('express');
-const {app,server} = require('./lib/socket')
+const express = require("express");
+const { app, server } = require("./lib/socket");
 
 //imports
-const connectDB = require('./lib/db');
-const { clerkMiddleware } = require('@clerk/express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const clerkWebhook = require('./webhooks/clerk.webhook');
-const job = require('./lib/cron');
-const authRoutes = require('./routes/auth.route');
-const messageRoutes = require('./routes/message.routes');
+const connectDB = require("./lib/db");
+const { clerkMiddleware } = require("@clerk/express");
+const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+const clerkWebhook = require("./webhooks/clerk.webhook");
+const job = require("./lib/cron");
+const authRoutes = require("./routes/auth.route");
+const messageRoutes = require("./routes/message.routes");
 //env imports
 const PORT = process.env.PORT;
-const FRONTEND_URL = process.env.FRONTEND_URL;
+const FRONTEND_URL = process.env.FRONTEND_URL
+  ? new URL(process.env.FRONTEND_URL).origin
+  : undefined;
 const NODE_ENV = process.env.NODE_ENV;
-const publicDir = path.join(process.cwd(),"public");
+const publicDir = path.join(process.cwd(), "public");
 
-app.use('/api/webhooks/clerk',express.raw({type:"application/json"}),clerkWebhook);
-//middleware 
+app.use(
+  "/api/webhooks/clerk",
+  express.raw({ type: "application/json" }),
+  clerkWebhook,
+);
+//middleware
 app.use(express.json());
-app.use(cors({origin:FRONTEND_URL,credentials:true}));
+app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(clerkMiddleware());
 
 //routes
-app.get('/health',(req,res)=>{
-    res.status(200).json({ok:true});
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true });
 });
-app.use('/api/auth',authRoutes);
-app.use('/api/messages',messageRoutes);
-if(fs.existsSync(publicDir)){
-    app.use(express.static(publicDir));
-    app.get("/{*any}",(req,res,next)=>{
-        res.sendFile(path.join(publicDir,"index.html"), (e)=> next(e));
-    });
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+app.use("/api/auth", authRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api", (req, res) =>
+  res.status(404).json({ message: "API endpoint not found." }),
+);
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  console.error("Request failed:", error.message);
+  const uploadError =
+    error.name === "MulterError" || error.message?.includes("only image");
+  const status = uploadError ? 400 : error.status === 413 ? 413 : 500;
+  res.status(status).json({
+    message: uploadError
+      ? "Choose an image or video smaller than 25 MB."
+      : status === 413
+        ? "This upload is too large."
+        : "Something went wrong. Please try again.",
+  });
+});
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  app.get("/{*any}", (req, res, next) => {
+    res.sendFile(path.join(publicDir, "index.html"), (e) => next(e));
+  });
 }
 
-
 //start listening
-server.listen(PORT,()=>{
-    connectDB();
-    console.log(`backend Server Running At Port ${PORT}`);
-    if(NODE_ENV ==='production'){
-        job.start();
-    }
+server.listen(PORT, () => {
+  connectDB();
+  console.log(`backend Server Running At Port ${PORT}`);
+  if (NODE_ENV === "production") {
+    job.start();
+  }
 });

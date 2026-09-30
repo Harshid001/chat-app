@@ -1,60 +1,37 @@
+const mongoose = require("mongoose");
 const User = require("../models/user.model");
 const Message = require("../models/message.model");
-const {hasImageKitConfig,uploadChatMedia} = require('../lib/imagekit');
-const { getReceiverSocketId, io } = require("../lib/socket");
-const getUsersForSidebar = async (req, res) => {
+const { hasImageKitConfig, uploadChatMedia } = require("../lib/imagekit");
+const { io, userRoom } = require("../lib/socket");
 
+const publicUser = "_id fullName profilePic";
+const validId = (id) => mongoose.isObjectIdOrHexString(id);
+
+async function getUsersForSidebar(req, res, next) {
   try {
-
-    const loggedInUserId = req.user._id;
-
-    const filteredUsers = await User.find({
-
-      _id: { $ne: loggedInUserId },
-
-    }).select("-clerkId");
-
-    res.status(200).json(filteredUsers);
-
-  } catch (e) {
-
-    console.error("error in getUsersForSidebar", e.message);
-
-    res.status(500).json({ message: "Internal Server Error" });
+    const users = await User.find({ _id: { $ne: req.user._id } })
+      .select(publicUser)
+      .sort({ fullName: 1 });
+    res.json(users);
+  } catch (error) {
+    next(error);
   }
-};
+}
 
-
-const getConversationForSideBar = async (req, res) => {
-
+async function getConversationForSideBar(req, res, next) {
   try {
-
-    const loggedInUserId = req.user._id;
-
+    const id = req.user._id;
     const conversations = await Message.aggregate([
-      // 1. Keep only the messages I sent or received.
-      {
-        $match: {
-          $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
-        },
-      },
-      // 2. Collapse them into one row per chat partner, noting our latest message time.
+      { $match: { $or: [{ senderId: id }, { receiverId: id }] } },
+      { $sort: { _id: -1 } },
       {
         $group: {
-          // The partner is the other person on the message (not me).
           _id: {
-            $cond: [
-              { $eq: ["$senderId", loggedInUserId] },
-              "$receiverId",
-              "$senderId",
-            ],
+            $cond: [{ $eq: ["$senderId", id] }, "$receiverId", "$senderId"],
           },
-          lastMessageAt: { $max: "$createdAt" },
+          lastMessage: { $first: "$$ROOT" },
         },
       },
-      // 3. Put the most recent conversation at the top.
-      { $sort: { lastMessageAt: -1 } },
-      // 4. Look up each partner's user profile (comes back as an array).
       {
         $lookup: {
           from: "users",
@@ -63,80 +40,111 @@ const getConversationForSideBar = async (req, res) => {
           as: "user",
         },
       },
-      // 5. Pull that profile out of the array and make it the document.
-      { $replaceRoot: { newRoot: { $first: "$user" } } },
-      // 6. Hide the private clerkId field from the result.
-      { $project: { clerkId: 0 } },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 1,
+          fullName: "$user.fullName",
+          profilePic: "$user.profilePic",
+          lastMessage: 1,
+        },
+      },
+      { $sort: { "lastMessage._id": -1 } },
     ]);
-
-    res.status(200).json(conversations);
-
+    res.json(conversations);
   } catch (error) {
-
-    console.error("Error in getConversationsForSidebar:", error.message);
-
-    res.status(500).json({ message: "Internal server error" });
-
+    next(error);
   }
+}
 
-};
-
-const getMessages = async (req, res) => {
-
+async function getMessages(req, res, next) {
   try {
-    // destructure id which we cant the user to chat with
-    const { id: userToChatId } = req.params;
-    // get the current user's id
-    const myId = req.user._id;
-
+    const partner = req.params.id;
+    if (!validId(partner))
+      return res.status(400).json({ message: "Invalid conversation." });
+    if (req.query.before && !validId(req.query.before))
+      return res.status(400).json({ message: "Invalid message cursor." });
     const messages = await Message.find({
       $or: [
-        { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId },
+        { senderId: req.user._id, receiverId: partner },
+        { senderId: partner, receiverId: req.user._id },
       ],
-    }).sort({ createdAt: 1 });
-
-    res.status(200).json(messages);
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({message:"Internal Server Error"});
+      ...(req.query.before ? { _id: { $lt: req.query.before } } : {}),
+    })
+      .sort({ _id: -1 })
+      .limit(50);
+    res.json({ messages: messages.reverse(), hasMore: messages.length === 50 });
+  } catch (error) {
+    next(error);
   }
-};
-const sendMessage = async(req,res)=>{
-  try{
-    const {text} = req.body;
-    const {id: receiverId} = req.params;
+}
+
+async function sendMessage(req, res, next) {
+  try {
+    const receiverId = req.params.id;
     const senderId = req.user._id;
-    
-    let imageUrl;
-    let videoUrl;
-
-    if(req.file && !hasImageKitConfig()){
-        return res.status(500).json({message:"No Media Upload Is Configured"});
+    const text = typeof req.body.text === "string" ? req.body.text.trim() : "";
+    const clientMessageId = req.body.clientMessageId;
+    if (!validId(receiverId) || String(senderId) === receiverId)
+      return res.status(400).json({ message: "Choose a valid recipient." });
+    if (!text && !req.file)
+      return res
+        .status(400)
+        .json({ message: "Write a message or add a photo." });
+    if (text.length > 5000)
+      return res
+        .status(400)
+        .json({ message: "Messages can contain up to 5,000 characters." });
+    if (clientMessageId && !/^[a-zA-Z0-9-]{16,80}$/.test(clientMessageId))
+      return res.status(400).json({ message: "Invalid message identifier." });
+    if (clientMessageId) {
+      const existing = await Message.findOne({ senderId, clientMessageId });
+      if (existing) return res.json({ newMessage: existing });
     }
-    const url = await uploadChatMedia(req.file);
-    if(req.file.mimetype.StartsWith('video/')) videoUrl = url;
-    else imageUrl = url;
-    
-
-    const newMessage = new Message({
+    if (!(await User.exists({ _id: receiverId })))
+      return res
+        .status(404)
+        .json({ message: "This account is no longer available." });
+    const media = {};
+    if (req.file) {
+      if (!hasImageKitConfig())
+        return res
+          .status(503)
+          .json({
+            message: "Media uploads are unavailable. You can still send text.",
+          });
+      media[req.file.mimetype.startsWith("video/") ? "video" : "image"] =
+        await uploadChatMedia(req.file);
+    }
+    const newMessage = await Message.create({
       senderId,
       receiverId,
       text,
-      image:imageUrl,
-      video:videoUrl
+      ...media,
+      ...(clientMessageId ? { clientMessageId } : {}),
     });
-    await newMessage.save();
-    // making it realtime with socketio
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if(receiverSocketId){
-      io.to(receiverSocketId).emit("newMessage",newMessage);
+    io.to(userRoom(receiverId))
+      .to(userRoom(senderId))
+      .emit("newMessage", newMessage);
+    res.status(201).json({ newMessage });
+  } catch (error) {
+    if (error.code === 11000 && req.body.clientMessageId) {
+      try {
+        const existing = await Message.findOne({
+          senderId: req.user._id,
+          clientMessageId: req.body.clientMessageId,
+        });
+        if (existing) return res.json({ newMessage: existing });
+      } catch (lookupError) {
+        return next(lookupError);
+      }
     }
-    res.status(201).json({newMessage});
-  }catch(e){
-    console.error("errror in sendMessage",e.message);
-    res.status(500).json({message:"Internal Server Error"});
-
+    next(error);
   }
 }
-module.exports = { getUsersForSidebar, getConversationForSideBar, getMessages ,sendMessage};
+module.exports = {
+  getUsersForSidebar,
+  getConversationForSideBar,
+  getMessages,
+  sendMessage,
+};
