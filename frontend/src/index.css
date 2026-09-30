@@ -13,39 +13,41 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --background: #f5f6f3;
+  --background: #f7f9f6;
   --surface: #ffffff;
-  --sidebar: #fafbf9;
-  --foreground: #242a27;
-  --muted: #eef0ec;
-  --muted-foreground: #68716a;
-  --border: #e5e9e2;
-  --primary: #365e49;
+  --sidebar: #fbfcf9;
+  --foreground: #1a221e;
+  --muted: #edf1ea;
+  --muted-foreground: #5c6b61;
+  --border: #e2e7df;
+  --primary: #245239;
   --primary-foreground: #ffffff;
-  --accent: #e9f0e6;
-  --accent-foreground: #36593f;
-  --ring: #66856a;
-  --destructive: #b54237;
-  --status: #4d996c;
+  --accent: #e5f0e6;
+  --accent-foreground: #1e4530;
+  --ring: #4f8061;
+  --destructive: #c0392b;
+  --status: #22c55e;
   color-scheme: light;
 }
+
 :root[data-theme="dark"] {
-  --background: #131715;
-  --surface: #1b201d;
-  --sidebar: #181d1a;
-  --foreground: #edf0e9;
-  --muted: #272e28;
-  --muted-foreground: #a0aaa1;
-  --border: #303931;
-  --primary: #b6cfa4;
-  --primary-foreground: #1c3021;
-  --accent: #29392c;
-  --accent-foreground: #c0d5b1;
-  --ring: #8eae7c;
-  --destructive: #ed9b91;
-  --status: #8cbc8c;
+  --background: #0d120f;
+  --surface: #141b16;
+  --sidebar: #101612;
+  --foreground: #eef3ed;
+  --muted: #1c261f;
+  --muted-foreground: #92a496;
+  --border: #253329;
+  --primary: #34d399;
+  --primary-foreground: #042416;
+  --accent: #192e21;
+  --accent-foreground: #a7f3d0;
+  --ring: #34d399;
+  --destructive: #f87171;
+  --status: #4ade80;
   color-scheme: dark;
 }
+
 @theme inline {
   --font-sans: "Inter Variable", Inter, sans-serif;
   --color-background: var(--background);
@@ -70,24 +72,25 @@
   --radius-2xl: 24px;
   --radius-3xl: 28px;
   --radius-full: 9999px;
-  --animate-popover: popover 0.15s ease-out;
+  --animate-popover: popover 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   @keyframes popover {
     from {
       opacity: 0;
-      transform: translateY(-3px);
+      transform: translateY(-4px) scale(0.98);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
   }
 }
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply m-0 min-w-80 bg-background text-foreground;
+    @apply m-0 min-w-80 bg-background text-foreground antialiased selection:bg-primary/20 selection:text-foreground;
   }
   button,
   a,
@@ -107,10 +110,7 @@
   }
   button:focus-visible,
   a:focus-visible {
-    @apply outline-2 outline-offset-4 outline-ring;
-  }
-  ::selection {
-    background: color-mix(in srgb, var(--primary) 20%, transparent);
+    @apply outline-2 outline-offset-2 outline-ring;
   }
   * {
     scrollbar-width: thin;
@@ -121,6 +121,7 @@
     @apply text-foreground;
   }
 }
+
 @layer utilities {
   .safe-top {
     padding-top: env(safe-area-inset-top);
@@ -129,19 +130,47 @@
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
   .chat-pattern {
-    background-image: radial-gradient(var(--border) 0.65px, transparent 0.65px);
-    background-size: 20px 20px;
+    background-image: radial-gradient(var(--border) 0.75px, transparent 0.75px);
+    background-size: 24px 24px;
+  }
+  .glass-card {
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  }
+  .hero-glow {
+    background: radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--primary) 20%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 15%, transparent) 40%,
+      transparent 75%
+    );
+  }
+  .mesh-gradient {
+    background-image:
+      radial-gradient(at 27% 37%, color-mix(in srgb, var(--primary) 12%, transparent) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, color-mix(in srgb, var(--status) 8%, transparent) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, color-mix(in srgb, var(--accent) 25%, transparent) 0px, transparent 50%);
+  }
+  .card-highlight {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent), 0 20px 40px -15px rgba(0, 0, 0, 0.07);
   }
 }
+
 /* Match hosted authentication to the same local design tokens. */
 .cl-cardBox {
   width: 100%;
-  box-shadow: none;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
+  overflow: hidden;
 }
 .cl-rootBox {
   width: 100%;
+}
+[data-radix-popper-content-wrapper]:has([role="tooltip"]) {
+  pointer-events: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -22,13 +22,13 @@ export default function Chime() {
       }}
       appearance={{
         variables: {
-          colorPrimary: dark ? "#b6cfa4" : "#365e49",
-          colorBackground: dark ? "#1b201d" : "#ffffff",
-          colorForeground: dark ? "#edf0e9" : "#242a27",
-          colorMutedForeground: dark ? "#a0aaa1" : "#68716a",
-          colorInput: dark ? "#272e28" : "#f5f6f3",
-          colorInputForeground: dark ? "#edf0e9" : "#242a27",
-          colorNeutral: dark ? "#edf0e9" : "#242a27",
+          colorPrimary: dark ? "#34d399" : "#245239",
+          colorBackground: dark ? "#141b16" : "#ffffff",
+          colorForeground: dark ? "#eef3ed" : "#1a221e",
+          colorMutedForeground: dark ? "#92a496" : "#5c6b61",
+          colorInput: dark ? "#1c261f" : "#f0f4ee",
+          colorInputForeground: dark ? "#eef3ed" : "#1a221e",
+          colorNeutral: dark ? "#eef3ed" : "#1a221e",
           borderRadius: "16px",
           fontFamily: "Inter Variable, Inter, sans-serif",
         },

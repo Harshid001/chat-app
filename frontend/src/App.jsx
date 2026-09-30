@@ -5,7 +5,9 @@ import AuthScreen from "./components/AuthScreen";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import {
+  Avatar,
   Brand,
+  Button,
   ErrorNotice,
   IconButton,
   Spinner,
@@ -30,7 +32,7 @@ export function Appearance({ children }) {
     document.documentElement.dataset.theme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#131715" : "#f5f6f3");
+      ?.setAttribute("content", theme === "dark" ? "#0d120f" : "#f7f9f6");
   }, [theme]);
   return children;
 }
@@ -71,15 +73,16 @@ export default function App() {
   );
   const [dialog, setDialog] = useState(null);
   const [authUnavailable, setAuthUnavailable] = useState(false);
+
   useEffect(() => {
     if (isLoaded) return;
     const controller = new AbortController();
     let active = true;
-    // navigator.onLine can remain true behind a disconnected proxy or captive portal.
-    // A cached shell must still render if the external identity SDK cannot load.
+
     const timer = setTimeout(() => {
       if (active) setAuthUnavailable(true);
     }, 12000);
+
     fetch(`${serverUrl}/health`, {
       cache: "no-store",
       signal: controller.signal,
@@ -90,12 +93,14 @@ export default function App() {
       .catch(() => {
         if (active) setAuthUnavailable(true);
       });
+
     return () => {
       active = false;
       clearTimeout(timer);
       controller.abort();
     };
   }, [isLoaded]);
+
   useEffect(() => {
     setTokenProvider(getToken);
     if (isLoaded && isSignedIn) initialize();
@@ -104,6 +109,7 @@ export default function App() {
       setTokenProvider(null);
     };
   }, [isLoaded, isSignedIn, userId, getToken, initialize, reset]);
+
   useEffect(() => {
     const online = () => {
       setNetworkOnline(true);
@@ -113,13 +119,16 @@ export default function App() {
     const visible = () => {
       if (!document.hidden) refresh();
     };
+
     window.addEventListener("online", online);
     window.addEventListener("offline", offline);
     document.addEventListener("visibilitychange", visible);
+
     const poll = setInterval(() => {
       if (useChat.getState().connection !== "connected" && !document.hidden)
         refresh();
     }, 30000);
+
     return () => {
       window.removeEventListener("online", online);
       window.removeEventListener("offline", offline);
@@ -127,6 +136,7 @@ export default function App() {
       clearInterval(poll);
     };
   }, [setNetworkOnline, refresh, isSignedIn, initialize]);
+
   if ((!networkOnline || (!isLoaded && authUnavailable)) && !profile)
     return (
       <>
@@ -137,22 +147,29 @@ export default function App() {
         <PwaUpdates />
       </>
     );
+
   if (!isLoaded)
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+      <main className="relative flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="pointer-events-none absolute inset-0 hero-glow opacity-60" />
         <Brand />
-        <Spinner label="Making a little room for you…" />
-        <p className="text-sm text-muted-foreground">
-          If this takes a while, check your connection.
-        </p>
-        <button
-          className="rounded-full border bg-surface px-5 py-2.5 text-sm"
-          onClick={() => window.location.reload()}
-        >
-          Reload
-        </button>
+        <div className="relative z-10 rounded-2xl border border-border/80 bg-surface/80 p-6 shadow-xl backdrop-blur-xl">
+          <Spinner label="Making a little room for you…" />
+          <p className="mt-2 text-xs text-muted-foreground">
+            If this takes a while, check your connection.
+          </p>
+          <Button
+            variant="outline"
+            size="small"
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Reload
+          </Button>
+        </div>
       </main>
     );
+
   if (!isSignedIn)
     return (
       <>
@@ -160,66 +177,91 @@ export default function App() {
         <PwaUpdates />
       </>
     );
+
   if (!profile)
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+      <main className="relative flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="pointer-events-none absolute inset-0 hero-glow opacity-60" />
         <Brand />
-        {booting ? (
-          <Spinner label="Getting your conversations ready…" />
-        ) : (
-          <ErrorNotice
-            message={bootError || "Couldn’t load your account."}
-            onRetry={initialize}
-          />
-        )}
+        <div className="relative z-10 w-full max-w-sm rounded-3xl border border-border/80 bg-surface/80 p-6 shadow-xl backdrop-blur-xl">
+          {booting ? (
+            <Spinner label="Getting your conversations ready…" />
+          ) : (
+            <ErrorNotice
+              message={bootError || "Couldn’t load your account."}
+              onRetry={initialize}
+            />
+          )}
+        </div>
       </main>
     );
+
   return (
-    <main className="h-dvh bg-background md:p-4 lg:p-6">
-      <div className="mx-auto flex h-full max-w-[1600px] overflow-hidden bg-surface/60 md:rounded-[26px] md:border md:shadow-[0_8px_40px_-24px_rgba(20,40,26,.15)]">
+    <main className="h-dvh bg-background p-0 md:p-3 lg:p-4.5 selection:bg-primary/20">
+      <div className="mx-auto flex h-full max-w-[1600px] overflow-hidden bg-surface/80 md:rounded-[28px] md:border md:border-border/80 md:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.12)] dark:md:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+        {/* Modern Left Dock Navigation Rail */}
         <nav
           aria-label="Main navigation"
-          className="hidden w-[68px] shrink-0 flex-col items-center border-r bg-surface/60 py-6 backdrop-blur-2xl md:flex"
+          className="hidden w-[72px] shrink-0 flex-col items-center border-r border-border/80 bg-sidebar/90 py-5 backdrop-blur-2xl md:flex"
         >
           <Brand small iconOnly />
-          <div className="mt-9 flex flex-col gap-3">
+
+          <div className="mt-8 flex flex-col gap-2.5">
             <IconButton
               label="Messages"
               aria-current="page"
               onClick={useChat.getState().clearSelection}
-              className="bg-accent text-accent-foreground"
+              className="relative size-11 rounded-2xl bg-accent text-accent-foreground shadow-xs transition-transform active:scale-95"
             >
-              <MessageCircle size={20} />
+              <MessageCircle size={21} />
             </IconButton>
+
             <IconButton
               label="Compose a message"
               onClick={() => setDialog("new")}
+              className="size-11 rounded-2xl text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground active:scale-95"
             >
-              <SquarePen size={19} />
+              <SquarePen size={20} />
             </IconButton>
           </div>
-          <div className="mt-auto flex flex-col gap-3">
+
+          <div className="mt-auto flex flex-col items-center gap-3">
             <ThemeMenu />
             <IconButton
               label="Open preferences"
               onClick={() => setDialog("settings")}
+              className="size-11 rounded-2xl text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground active:scale-95"
             >
-              <Settings2 size={19} />
+              <Settings2 size={20} />
             </IconButton>
+            <button
+              onClick={() => setDialog("settings")}
+              className="mt-1 transition-transform hover:scale-105 active:scale-95"
+              title="Your profile"
+            >
+              <Avatar user={profile} size="avatar-small" />
+            </button>
           </div>
         </nav>
+
+        {/* Sidebar Conversations */}
         <Sidebar
           onNew={() => setDialog("new")}
           onSettings={() => setDialog("settings")}
         />
+
+        {/* Chat Panel View */}
         <ChatPanel onNew={() => setDialog("new")} />
       </div>
+
+      {/* Dialog Modals */}
       <Suspense fallback={null}>
         {dialog === "new" && (
           <NewConversation onClose={() => setDialog(null)} />
         )}
         {dialog === "settings" && <Settings onClose={() => setDialog(null)} />}
       </Suspense>
+
       <PwaUpdates />
     </main>
   );

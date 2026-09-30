@@ -35,19 +35,19 @@ export function Button({
     <Tag
       type={asChild ? undefined : "button"}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium transition-[transform,background-color,border-color,color,box-shadow] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
         {
-          "border border-primary bg-primary text-primary-foreground shadow-xs hover:bg-primary/90":
+          "border border-primary/20 bg-primary text-primary-foreground shadow-[0_2px_12px_-3px_rgba(36,82,57,0.35)] dark:shadow-[0_2px_16px_-3px_rgba(52,211,153,0.3)] hover:brightness-105":
             variant === "primary",
-          "border border-border bg-surface text-foreground shadow-xs hover:bg-muted":
+          "border border-border/80 bg-surface/75 text-foreground backdrop-blur-xl shadow-xs hover:bg-muted/80 hover:border-border":
             variant === "outline",
-          "text-muted-foreground hover:bg-muted hover:text-foreground":
+          "text-muted-foreground hover:bg-muted/70 hover:text-foreground":
             variant === "ghost",
-          "bg-accent text-accent-foreground hover:bg-accent/75":
+          "bg-accent text-accent-foreground hover:bg-accent/80":
             variant === "soft",
-          "border border-destructive/20 text-destructive hover:bg-destructive/5":
+          "border border-destructive/20 text-destructive bg-destructive/5 hover:bg-destructive/10":
             variant === "danger",
-          "h-11 px-4": size === "default",
+          "h-11 px-5": size === "default",
           "h-9 rounded-full px-3 text-xs": size === "small",
           "size-10 p-0": size === "icon",
         },
@@ -76,7 +76,7 @@ export function IconButton({ label, children, className, ...props }) {
       <Tooltip.Portal>
         <Tooltip.Content
           sideOffset={7}
-          className="z-[80] rounded-lg bg-foreground px-2.5 py-1.5 text-xs text-background shadow-sm animate-popover"
+          className="pointer-events-none z-[80] rounded-lg bg-foreground px-2.5 py-1.5 text-xs text-background shadow-sm animate-popover select-none"
         >
           {label}
           <Tooltip.Arrow className="fill-foreground" />
@@ -149,8 +149,10 @@ export function Avatar({ user, size = "", online = false, className }) {
         <span
           role="status"
           aria-label="Online"
-          className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-surface bg-status"
+          className="absolute bottom-0 right-0 flex size-3"
         >
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-status opacity-60" />
+          <span className="relative inline-flex size-3 rounded-full border-2 border-surface bg-status shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
           <span className="sr-only"> (Online)</span>
         </span>
       )}
@@ -161,21 +163,21 @@ export function Brand({ small = false, iconOnly = false }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2.5 text-[25px] font-semibold tracking-[-1.2px]",
-        small && "text-xl",
+        "inline-flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.03em] select-none",
+        small && "text-lg tracking-tight",
       )}
     >
       <span
         className={cn(
-          "flex size-10 items-center justify-center rounded-[13px] bg-primary text-primary-foreground",
-          small && "size-9 rounded-xl",
+          "flex size-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-[0_4px_16px_-4px_rgba(36,82,57,0.4)] dark:shadow-[0_4px_16px_-4px_rgba(52,211,153,0.3)] transition-transform hover:scale-105",
+          small && "size-8 rounded-xl shadow-xs",
         )}
       >
-        <MessagesSquare size={small ? 19 : 22} strokeWidth={1.8} />
+        <MessagesSquare size={small ? 17 : 21} strokeWidth={2} />
       </span>
       {!iconOnly && (
-        <span>
-          chime<span className="text-primary">.</span>
+        <span className="font-semibold text-foreground">
+          chime<span className="text-primary font-bold">.</span>
         </span>
       )}
       {iconOnly && <span className="sr-only">Chime</span>}
