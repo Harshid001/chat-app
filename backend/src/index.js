@@ -14,6 +14,7 @@ const path = require('path');
 const clerkWebhook = require('./webhooks/clerk.webhook');
 const job = require('./lib/cron');
 const authRoutes = require('./routes/auth.route');
+const messageRoutes = require('./routes/message.routes');
 //env imports
 const PORT = process.env.PORT;
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -31,6 +32,7 @@ app.get('/health',(req,res)=>{
     res.status(200).json({ok:true});
 });
 app.use('/api/auth',authRoutes);
+app.use('/api/messages',messageRoutes);
 if(fs.existsSync(publicDir)){
     app.use(express.static(publicDir));
     app.get("/{*any}",(req,res,next)=>{
@@ -43,7 +45,6 @@ if(fs.existsSync(publicDir)){
 app.listen(PORT,()=>{
     connectDB();
     console.log(`backend Server Running At Port ${PORT}`);
-    
     if(NODE_ENV ==='production'){
         job.start();
     }

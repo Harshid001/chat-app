@@ -13,7 +13,9 @@ const protectRoute = async(req,res,next)=>{
             res.status(404).json({message:"User Profile Not Synced Yet"});
         }
         req.user = user;
+        
         next();
+
     }catch(e){
         console.error("Error In Middleware",e.meesage);
         res.status(500).json({message:"Internal Server Error"});
