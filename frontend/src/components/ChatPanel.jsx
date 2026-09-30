@@ -145,8 +145,10 @@ function Conversation({ id }) {
         </IconButton>
         <Avatar user={user} size="avatar-small" online={online} />
         <button
-          className="min-w-0 text-left [&>strong]:block [&>strong]:truncate [&>strong]:text-sm [&>strong]:font-semibold [&>span]:mt-1 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:text-[11px] [&>span]:text-muted-foreground"
+          className="min-w-0 rounded-xl p-1.5 -m-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>strong]:block [&>strong]:truncate [&>strong]:text-sm [&>strong]:font-semibold [&>span]:mt-0.5 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:text-[11px] [&>span]:text-muted-foreground"
           onClick={() => setDetails(true)}
+          aria-haspopup="dialog"
+          aria-label={`View conversation details for ${user?.fullName || "contact"}`}
         >
           <strong>{user?.fullName}</strong>
           <span>
@@ -464,11 +466,79 @@ function Conversation({ id }) {
   );
 }
 
+const EMOJI_CATEGORIES = [
+  {
+    id: "warmth",
+    name: "Warmth",
+    items: [
+      ["😊", "Warm smile"],
+      ["🥰", "Loving smile"],
+      ["😌", "Calm and peaceful"],
+      ["✨", "Gentle sparkles"],
+      ["💛", "Warm heart"],
+      ["☕", "Warm drink"],
+      ["🌿", "Green sprig"],
+      ["🌸", "Cherry blossom"],
+      ["🫶", "Heart hands"],
+      ["🫂", "Warm hug"],
+    ],
+  },
+  {
+    id: "gestures",
+    name: "Gestures",
+    items: [
+      ["👍", "Thumbs up"],
+      ["🙌", "Celebrating hands"],
+      ["🤝", "Handshake"],
+      ["🙏", "Gratitude"],
+      ["👋", "Friendly wave"],
+      ["✌️", "Peace sign"],
+      ["❤️", "Red heart"],
+      ["💌", "Heart letter"],
+      ["💬", "Speech bubble"],
+      ["🕊️", "Dove of peace"],
+    ],
+  },
+  {
+    id: "joy",
+    name: "Joy",
+    items: [
+      ["😂", "Hearty laugh"],
+      ["🥳", "Celebration"],
+      ["🎉", "Party popper"],
+      ["🎈", "Party balloon"],
+      ["🥂", "Clinking glasses"],
+      ["🎶", "Musical notes"],
+      ["☀️", "Bright sun"],
+      ["🌈", "Gentle rainbow"],
+      ["🍰", "Sweet treat"],
+      ["🌟", "Glowing star"],
+    ],
+  },
+  {
+    id: "moments",
+    name: "Moments",
+    items: [
+      ["💭", "Thought bubble"],
+      ["💡", "Lightbulb moment"],
+      ["📖", "Good reading"],
+      ["✍️", "Writing notes"],
+      ["🏡", "Comfortable home"],
+      ["🌙", "Evening moon"],
+      ["⭐", "Quiet star"],
+      ["🌧️", "Gentle rain"],
+      ["🍎", "Fresh fruit"],
+      ["🚲", "Bicycle stroll"],
+    ],
+  },
+];
+
 function Composer({ id, onSend }) {
   const text = useChat((state) => state.drafts[id] || "");
   const online = useChat((state) => state.networkOnline);
   const [attachment, setAttachment] = useState(null);
   const [emojis, setEmojis] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState("warmth");
   const inputRef = useRef(null);
   const recipient = useChat(
     (state) =>
@@ -532,10 +602,10 @@ function Composer({ id, onSend }) {
             if (
               event.key === "Enter" &&
               !event.shiftKey &&
-              !event.nativeEvent.isComposing &&
-              !window.matchMedia("(pointer: coarse)").matches
-            )
+              !event.nativeEvent.isComposing
+            ) {
               send(event);
+            }
           }}
           onPaste={(event) => {
             const pastedFile = event.clipboardData.files[0];
@@ -556,44 +626,58 @@ function Composer({ id, onSend }) {
               side="top"
               align="end"
               sideOffset={12}
-              aria-label="Emoji"
-              className="z-40 grid grid-cols-4 gap-1 rounded-2xl border bg-surface/90 p-2 shadow-lg outline-none backdrop-blur-2xl animate-popover"
+              aria-label="Emoji picker"
+              className="z-40 w-72 rounded-2xl border border-border bg-surface/95 p-3 shadow-xl outline-none backdrop-blur-2xl animate-popover"
               onCloseAutoFocus={(event) => {
                 event.preventDefault();
                 inputRef.current?.focus();
               }}
             >
-              {[
-                ["😊", "Smiling face"],
-                ["❤️", "Heart"],
-                ["👍", "Thumbs up"],
-                ["😂", "Laughing face"],
-                ["🎉", "Celebration"],
-                ["👋", "Wave"],
-                ["☀️", "Sun"],
-                ["✨", "Sparkles"],
-              ].map(([emoji, name]) => (
-                <button
-                  type="button"
-                  className="flex size-11 items-center justify-center rounded-xl text-2xl transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-                  key={name}
-                  aria-label={name}
-                  onClick={() => {
-                    useChat
-                      .getState()
-                      .setDraft(id, `${text}${emoji}`.slice(0, 5000));
-                    setEmojis(false);
-                    inputRef.current.focus();
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
+              <div className="mb-2.5 flex items-center justify-between gap-1 rounded-xl bg-muted/60 p-1 text-[11px] font-medium text-foreground/75">
+                {EMOJI_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setEmojiCategory(cat.id)}
+                    className={cn(
+                      "flex-1 rounded-lg py-1 px-1 text-center transition-all",
+                      emojiCategory === cat.id
+                        ? "bg-surface text-foreground shadow-xs font-semibold"
+                        : "hover:text-foreground",
+                    )}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 pt-1">
+                {(
+                  EMOJI_CATEGORIES.find((c) => c.id === emojiCategory) ||
+                  EMOJI_CATEGORIES[0]
+                ).items.map(([emoji, name]) => (
+                  <button
+                    type="button"
+                    className="flex size-10 items-center justify-center rounded-xl text-2xl transition-all duration-100 hover:scale-110 hover:bg-muted active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                    key={name}
+                    aria-label={name}
+                    title={name}
+                    onClick={() => {
+                      useChat
+                        .getState()
+                        .setDraft(id, `${text}${emoji}`.slice(0, 5000));
+                      setEmojis(false);
+                      inputRef.current.focus();
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
         <button
-          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all duration-150 active:scale-95 hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground disabled:active:scale-100"
           type="submit"
           aria-label="Send message"
           disabled={!text.trim() || !online}

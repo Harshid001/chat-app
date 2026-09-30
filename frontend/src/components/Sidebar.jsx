@@ -160,7 +160,7 @@ export default function Sidebar({ onNew, onSettings }) {
               onClick={() => state.selectConversation(user)}
               aria-current={state.activeId === user._id ? "true" : undefined}
               className={cn(
-                "group relative my-1 flex w-full items-center gap-3 rounded-xl p-3.5 text-left transition-colors hover:bg-muted/70",
+                "group relative my-1 flex w-full items-center gap-3 rounded-xl p-3.5 text-left transition-[transform,background-color] duration-150 active:scale-[0.99] hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                 state.activeId === user._id && "bg-accent hover:bg-accent",
               )}
             >
@@ -239,8 +239,8 @@ export default function Sidebar({ onNew, onSettings }) {
         <InstallButton />
         <button
           onClick={onSettings}
-          aria-label="Account and appearance"
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-muted"
+          aria-label="Account and appearance settings"
+          className="mt-2 flex w-full items-center gap-3 rounded-2xl px-2.5 py-3 text-left transition-[transform,background-color] duration-150 active:scale-[0.99] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         >
           <Avatar user={state.profile} size="avatar-small" />
           <span className="min-w-0 flex-1">
@@ -249,6 +249,14 @@ export default function Sidebar({ onNew, onSettings }) {
             </strong>
             <span className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <span
+                role="status"
+                aria-label={
+                  !state.networkOnline
+                    ? "Offline"
+                    : state.connection === "connected"
+                      ? "Connected"
+                      : "Connecting"
+                }
                 className={cn(
                   "size-1.5 rounded-full",
                   state.connection === "connected"

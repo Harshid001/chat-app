@@ -17,8 +17,22 @@ import { cn } from "../lib/utils";
 const ACCEPT =
   "image/jpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/webm,video/quicktime";
 const TYPES = new Set(ACCEPT.split(","));
+const EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+  "avif",
+  "mp4",
+  "webm",
+  "mov",
+]);
 function validate(file) {
-  if (!TYPES.has(file.type))
+  const ext = file.name ? file.name.split(".").pop().toLowerCase() : "";
+  const typeValid = TYPES.has(file.type);
+  const extValid = EXTENSIONS.has(ext);
+  if (!typeValid && !extValid)
     return "This format isn’t supported. Choose JPG, PNG, GIF, WebP, AVIF, MP4, WebM, or MOV. Export HEIC photos as JPG first.";
   if (!file.size)
     return "This file is empty. Choose a photo or video with content.";

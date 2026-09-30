@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "@clerk/react";
 import AuthScreen from "./components/AuthScreen";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
-import { NewConversation, Settings } from "./components/Dialogs";
 import {
   Brand,
   ErrorNotice,
@@ -12,6 +11,13 @@ import {
   Spinner,
   ThemeMenu,
 } from "./components/ui";
+
+const NewConversation = lazy(() =>
+  import("./components/Dialogs").then((m) => ({ default: m.NewConversation })),
+);
+const Settings = lazy(() =>
+  import("./components/Dialogs").then((m) => ({ default: m.Settings })),
+);
 import { PwaUpdates } from "./components/Pwa";
 import { serverUrl, setTokenProvider } from "./lib/api";
 import { useChat } from "./stores/chat";
@@ -208,8 +214,12 @@ export default function App() {
         />
         <ChatPanel onNew={() => setDialog("new")} />
       </div>
-      {dialog === "new" && <NewConversation onClose={() => setDialog(null)} />}
-      {dialog === "settings" && <Settings onClose={() => setDialog(null)} />}
+      <Suspense fallback={null}>
+        {dialog === "new" && (
+          <NewConversation onClose={() => setDialog(null)} />
+        )}
+        {dialog === "settings" && <Settings onClose={() => setDialog(null)} />}
+      </Suspense>
       <PwaUpdates />
     </main>
   );
