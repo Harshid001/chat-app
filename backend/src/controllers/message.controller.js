@@ -131,7 +131,7 @@ const sendMessage = async(req,res)=>{
   }catch(e){
     console.error("errror in sendMessage",e.message);
     res.status(500).json({message:"Internal Server Error"});
-    
+
   }
 }
-module.exports = { getUsersForSidebar, getConversationForSideBar, getMessages };
+module.exports = { getUsersForSidebar, getConversationForSideBar, getMessages ,sendMessage};
