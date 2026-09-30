@@ -295,3 +295,20 @@ test("real Socket.IO transport receives once and reconnects", async ({
     control.disconnect();
   }
 });
+
+test("cached shell recovers when external authentication cannot load", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem("fixture-auth-loading", "true"),
+  );
+  await page.route("**/health", (route) => route.abort());
+  await page.goto("/");
+  await expect(
+    page.getByText("Connection unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Try again", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Making a little room for you…")).toHaveCount(0);
+});

@@ -7,7 +7,7 @@ import ChatPanel from "./components/ChatPanel";
 import { NewConversation, Settings } from "./components/Dialogs";
 import { Brand, ErrorNotice, Spinner } from "./components/ui";
 import { PwaUpdates } from "./components/Pwa";
-import { setTokenProvider } from "./lib/api";
+import { serverUrl, setTokenProvider } from "./lib/api";
 import { useChat } from "./stores/chat";
 import { usePreferences } from "./stores/preferences";
 
@@ -64,6 +64,32 @@ export default function App() {
     ),
   );
   const [dialog, setDialog] = useState(null);
+  const [authUnavailable, setAuthUnavailable] = useState(false);
+  useEffect(() => {
+    if (isLoaded) return;
+    const controller = new AbortController();
+    let active = true;
+    // navigator.onLine can remain true behind a disconnected proxy or captive portal.
+    // A cached shell must still render if the external identity SDK cannot load.
+    const timer = setTimeout(() => {
+      if (active) setAuthUnavailable(true);
+    }, 12000);
+    fetch(`${serverUrl}/health`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok && active) setAuthUnavailable(true);
+      })
+      .catch(() => {
+        if (active) setAuthUnavailable(true);
+      });
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isLoaded]);
   useEffect(() => {
     setTokenProvider(getToken);
     if (isLoaded && isSignedIn) initialize();
@@ -95,10 +121,13 @@ export default function App() {
       clearInterval(poll);
     };
   }, [setNetworkOnline, refresh, isSignedIn, initialize]);
-  if (!networkOnline && !profile)
+  if ((!networkOnline || (!isLoaded && authUnavailable)) && !profile)
     return (
       <>
-        <AuthScreen offline />
+        <AuthScreen
+          offline={!networkOnline}
+          connectionError={authUnavailable}
+        />
         <PwaUpdates />
       </>
     );

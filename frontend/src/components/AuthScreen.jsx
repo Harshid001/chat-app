@@ -12,7 +12,11 @@ import { Brand, IconButton } from "./ui";
 import { InstallButton } from "./Pwa";
 import { usePreferences } from "../stores/preferences";
 
-export default function AuthScreen({ configured = true, offline = false }) {
+export default function AuthScreen({
+  configured = true,
+  offline = false,
+  connectionError = false,
+}) {
   const routeMode = () =>
     window.location.pathname.startsWith("/sign-up")
       ? "signup"
@@ -73,13 +77,21 @@ export default function AuthScreen({ configured = true, offline = false }) {
                 in.
               </p>
             </div>
-          ) : offline ? (
+          ) : offline || connectionError ? (
             <div className="setup-notice" role="status">
-              <strong>You’re offline</strong>
+              <strong>
+                {offline ? "You’re offline" : "Connection unavailable"}
+              </strong>
               <p>
                 The app is ready. Reconnect to sign in and load your
                 conversations.
               </p>
+              <button
+                className="text-button mt-3"
+                onClick={() => window.location.reload()}
+              >
+                Try again
+              </button>
             </div>
           ) : mode === "welcome" ? (
             <>

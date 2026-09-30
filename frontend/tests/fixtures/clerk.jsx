@@ -15,7 +15,7 @@ export function ClerkProvider({ children }) {
 export function useAuth() {
   const { signedIn } = useContext(Identity);
   return {
-    isLoaded: true,
+    isLoaded: !sessionStorage.getItem("fixture-auth-loading"),
     isSignedIn: signedIn,
     userId: signedIn ? "fixture-user" : null,
     getToken,
