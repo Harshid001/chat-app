@@ -2,7 +2,7 @@ const express = require('express');
 
 
 const router = express.Router();
-const {getUsersForSidebar, getConversationForSideBar, getMessages} = require('../controllers/message.controller');
+const {getUsersForSidebar, getConversationForSideBar, getMessages,sendMessage} = require('../controllers/message.controller');
 
 const protectRoute = require('../middleware/auth.middleware');
 const upload = require('../middleware/upload.middleware');
