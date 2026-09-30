@@ -25,4 +25,4 @@ async function uploadChatMedia(file){
     return result.url;
 };
 
-modules.export= {uploadChatMedia,hasImageKitConfig};
+module.export= {uploadChatMedia,hasImageKitConfig};
