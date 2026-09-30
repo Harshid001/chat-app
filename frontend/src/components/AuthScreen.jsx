@@ -7,13 +7,12 @@ import {
   ArrowUp,
   CheckCheck,
   Ellipsis,
+  Heart,
   MessageCircle,
-  Plus,
-  Smile,
-  Sparkles,
 } from "lucide-react";
 import { Avatar, Brand, Button, ThemeMenu } from "./ui";
 import { InstallButton } from "./Pwa";
+import { cn } from "../lib/utils";
 
 export default function AuthScreen({
   configured = true,
@@ -27,11 +26,55 @@ export default function AuthScreen({
         ? "signin"
         : "welcome";
   const [mode, setMode] = useState(routeMode);
+  const [previewMessages, setPreviewMessages] = useState([
+    { id: 1, mine: false, text: "Same place, same time?" },
+    { id: 2, mine: true, text: "Wouldn’t miss it." },
+    { id: 3, mine: false, text: "I have so much to tell you." },
+    { id: 4, mine: true, text: "I’m all ears. Coffee’s on me." },
+  ]);
+  const [previewInput, setPreviewInput] = useState("");
+  const [alexTyping, setAlexTyping] = useState(false);
+
   useEffect(() => {
     const sync = () => setMode(routeMode());
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
   }, []);
+
+  useEffect(() => {
+    document.title =
+      mode === "signin"
+        ? "Sign in — Chime"
+        : mode === "signup"
+          ? "Create your account — Chime"
+          : "Chime — A little more connected";
+  }, [mode]);
+
+  function handleSendPreview(textToSend) {
+    const text = (textToSend || previewInput).trim();
+    if (!text) return;
+    setPreviewMessages((prev) => [
+      ...prev,
+      { id: Date.now(), mine: true, text },
+    ]);
+    setPreviewInput("");
+    setAlexTyping(true);
+    setTimeout(() => {
+      setAlexTyping(false);
+      const responses = [
+        "Sounds like a plan! See you there 😊",
+        "Always good catching up with you 🌿",
+        "Can't wait! Coffee's on you next time ☕",
+        "Looking forward to it! Have a good one ✨",
+      ];
+      const reply = responses[Math.floor(Math.random() * responses.length)];
+      setPreviewMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, mine: false, text: reply },
+      ]);
+    }, 700);
+  }
+
   function navigate(next) {
     window.history.pushState(
       {},
@@ -59,18 +102,24 @@ export default function AuthScreen({
         >
           {mode === "welcome" || !configured || offline || connectionError ? (
             <>
-              <span className="mb-7 inline-flex items-center gap-2 rounded-full border bg-surface/70 py-2 pl-3 pr-4 text-[11px] font-medium text-muted-foreground shadow-xs backdrop-blur-xl">
-                <span className="size-1.5 rounded-full bg-status" />A quieter
-                place to catch up
+              <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/75 py-2 pl-3 pr-4 text-xs font-medium text-foreground/85 shadow-xs backdrop-blur-xl">
+                <span
+                  role="status"
+                  aria-label="Available"
+                  className="size-1.5 rounded-full bg-status"
+                >
+                  <span className="sr-only"> (Available)</span>
+                </span>
+                A quieter place to catch up
               </span>
-              <h1 className="text-[clamp(2rem,4vw,3.25rem)] font-medium leading-[1.16] tracking-[-1.7px]">
+              <h1 className="text-[clamp(2.1rem,4vw,3.25rem)] font-medium leading-[1.16] tracking-tight sm:tracking-[-0.03em]">
                 Less noise.
                 <br />
                 <span className="whitespace-nowrap text-primary">
                   More connection.
                 </span>
               </h1>
-              <p className="mt-6 max-w-[330px] text-sm leading-7 text-muted-foreground sm:text-[15px]">
+              <p className="mt-6 max-w-[340px] text-sm leading-7 text-muted-foreground sm:text-[15px]">
                 For the everyday updates, the weekend plans, and the people who
                 make it all better.
               </p>
@@ -189,66 +238,114 @@ export default function AuthScreen({
           )}
         </motion.section>
         <section
-          className="relative flex min-h-[460px] items-center justify-center rounded-[32px] border border-border/60 bg-accent/45 px-4 py-12 sm:min-h-[560px] sm:px-7"
-          aria-label="Conversation preview"
+          className="relative flex min-h-[460px] items-center justify-center rounded-[32px] border border-border/60 bg-accent/45 px-4 py-10 sm:min-h-[560px] sm:px-7"
+          aria-label="Interactive conversation preview"
         >
           <div className="absolute inset-0 rounded-[32px] opacity-55 chat-pattern" />
-          <span className="absolute left-6 top-6 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[.14em] text-muted-foreground">
-            <MessageCircle size={13} />
+          <span className="absolute left-6 top-6 flex items-center gap-2 text-xs font-medium uppercase tracking-[.1em] text-muted-foreground">
+            <MessageCircle size={14} />
             Life, in the little messages
           </span>
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="relative w-full max-w-[370px] overflow-hidden rounded-3xl border border-white/60 bg-surface/75 shadow-[0_16px_50px_-24px_rgba(22,44,29,.25)] backdrop-blur-2xl dark:border-border"
-            aria-hidden="true"
+            className="relative w-full max-w-[380px] overflow-hidden rounded-3xl border border-white/60 bg-surface/85 shadow-[0_16px_50px_-24px_rgba(22,44,29,.25)] backdrop-blur-2xl dark:border-border"
           >
             <div className="flex items-center gap-3 border-b border-border/70 px-5 py-4">
-              <Avatar user={{ fullName: "Alex" }} size="avatar-small" />
+              <Avatar user={{ fullName: "Alex" }} size="avatar-small" online />
               <div className="flex-1">
-                <strong className="text-sm font-semibold">
-                  A familiar face
-                </strong>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  Always something to talk about.
+                <strong className="text-sm font-semibold">Alex</strong>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {alexTyping ? "Typing a thought…" : "Online now"}
                 </p>
               </div>
-              <Ellipsis size={19} className="text-muted-foreground" />
+              <Ellipsis size={18} className="text-muted-foreground" />
             </div>
-            <div className="space-y-4 px-5 pb-6 pt-5">
-              <p className="pb-2 text-center text-[10px] text-muted-foreground">
-                A little everyday conversation
+            <div className="space-y-3 px-5 pb-4 pt-4 max-h-[300px] overflow-y-auto">
+              <p className="pb-1 text-center text-xs text-muted-foreground">
+                A quiet everyday catch-up
               </p>
-              <div className="w-fit max-w-[90%] rounded-[20px] rounded-bl-md border border-border/70 bg-surface/80 px-4 py-3 text-xs leading-relaxed">
-                Same place, same time?
-              </div>
-              <div className="ml-auto w-fit max-w-[90%] rounded-[20px] rounded-br-md bg-primary px-4 py-3 text-xs leading-relaxed text-primary-foreground">
-                Wouldn’t miss it.
-              </div>
-              <div className="w-fit max-w-[90%] rounded-[20px] rounded-bl-md border border-border/70 bg-surface/80 px-4 py-3 text-xs leading-relaxed">
-                I have so much to tell you.
-              </div>
-              <div className="ml-auto w-fit max-w-[90%] rounded-[20px] rounded-br-md bg-primary px-4 py-3 text-xs leading-relaxed text-primary-foreground">
-                I’m all ears. Coffee’s on me.
-              </div>
-              <div className="flex items-center justify-end gap-1 text-[9px] text-muted-foreground">
-                <CheckCheck size={12} />
+              {previewMessages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "flex flex-col",
+                    msg.mine ? "items-end" : "items-start",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-fit max-w-[85%] rounded-[20px] px-3.5 py-2.5 text-xs leading-relaxed transition-all",
+                      msg.mine
+                        ? "rounded-br-md bg-primary text-primary-foreground shadow-xs"
+                        : "rounded-bl-md border border-border/70 bg-surface/90 text-foreground",
+                    )}
+                  >
+                    {msg.text}
+                  </div>
+                </motion.div>
+              ))}
+              {alexTyping && (
+                <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-surface/80 px-3 py-1.5 w-fit text-xs text-muted-foreground">
+                  <span className="size-1.5 rounded-full bg-primary animate-bounce" />
+                  <span className="size-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
+                  <span className="size-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+                  <span className="text-[11px] ml-1">Alex is typing</span>
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-1.5 pt-1 text-[11px] text-muted-foreground font-medium">
+                <CheckCheck size={13} className="text-primary" />
                 The start of a good day
               </div>
             </div>
-            <div className="mx-4 mb-4 flex items-center gap-3 rounded-full border bg-surface/70 p-2 text-muted-foreground">
-              <Plus size={17} className="ml-1" />
-              <span className="flex-1 text-[11px]">Write a message…</span>
-              <Smile size={17} />
-              <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <ArrowUp size={16} />
-              </span>
+            <div className="px-4 pb-2 pt-1 flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[10px] text-muted-foreground shrink-0 uppercase tracking-wider font-semibold">Try:</span>
+              {[
+                "Coffee later? ☕",
+                "How are you doing? 🌿",
+                "Have a wonderful day! ☀️",
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => handleSendPreview(chip)}
+                  className="shrink-0 text-[11px] rounded-full border border-border/80 bg-surface/70 px-2.5 py-1 text-muted-foreground transition-all duration-150 active:scale-95 hover:bg-muted hover:text-foreground"
+                >
+                  {chip}
+                </button>
+              ))}
             </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendPreview();
+              }}
+              className="mx-4 mb-4 flex items-center gap-2 rounded-full border border-border/80 bg-surface/75 p-1.5 shadow-xs transition-shadow focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15"
+            >
+              <input
+                type="text"
+                value={previewInput}
+                onChange={(e) => setPreviewInput(e.target.value)}
+                placeholder="Say hello to test…"
+                className="flex-1 bg-transparent px-3 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                aria-label="Send test message to Alex in preview"
+              />
+              <button
+                type="submit"
+                aria-label="Send message in preview"
+                disabled={!previewInput.trim()}
+                className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all duration-150 active:scale-95 hover:bg-primary/90 disabled:opacity-40"
+              >
+                <ArrowUp size={15} strokeWidth={2.2} />
+              </button>
+            </form>
           </motion.div>
-          <span className="absolute bottom-5 right-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-surface/70 px-4 py-2.5 text-[11px] text-muted-foreground shadow-xs backdrop-blur-xl">
-            <Sparkles size={13} className="text-primary" />A little hello goes a
-            long way.
+          <span className="absolute bottom-5 right-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-surface/75 px-4 py-2.5 text-xs text-muted-foreground shadow-xs backdrop-blur-xl">
+            <Heart size={13} className="text-primary fill-primary/20" />
+            A little hello goes a long way.
           </span>
         </section>
       </div>

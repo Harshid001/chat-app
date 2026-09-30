@@ -468,16 +468,32 @@ function Conversation({ id }) {
 
 const EMOJI_CATEGORIES = [
   {
+    id: "quick",
+    name: "Quick",
+    items: [
+      ["😊", "Smiling face"],
+      ["❤️", "Heart"],
+      ["👍", "Thumbs up"],
+      ["😂", "Laughing face"],
+      ["🎉", "Celebration"],
+      ["👋", "Wave"],
+      ["☀️", "Sun"],
+      ["✨", "Sparkles"],
+      ["☕", "Coffee"],
+      ["🌿", "Plant"],
+    ],
+  },
+  {
     id: "warmth",
     name: "Warmth",
     items: [
-      ["😊", "Warm smile"],
+      ["😊", "Smiling face"],
       ["🥰", "Loving smile"],
       ["😌", "Calm and peaceful"],
-      ["✨", "Gentle sparkles"],
+      ["✨", "Sparkles"],
       ["💛", "Warm heart"],
-      ["☕", "Warm drink"],
-      ["🌿", "Green sprig"],
+      ["☕", "Coffee"],
+      ["🌿", "Plant"],
       ["🌸", "Cherry blossom"],
       ["🫶", "Heart hands"],
       ["🫂", "Warm hug"],
@@ -491,26 +507,26 @@ const EMOJI_CATEGORIES = [
       ["🙌", "Celebrating hands"],
       ["🤝", "Handshake"],
       ["🙏", "Gratitude"],
-      ["👋", "Friendly wave"],
+      ["👋", "Wave"],
       ["✌️", "Peace sign"],
-      ["❤️", "Red heart"],
+      ["❤️", "Heart"],
       ["💌", "Heart letter"],
       ["💬", "Speech bubble"],
-      ["🕊️", "Dove of peace"],
+      ["🕊️", "Dove"],
     ],
   },
   {
     id: "joy",
     name: "Joy",
     items: [
-      ["😂", "Hearty laugh"],
+      ["😂", "Laughing face"],
       ["🥳", "Celebration"],
       ["🎉", "Party popper"],
       ["🎈", "Party balloon"],
       ["🥂", "Clinking glasses"],
       ["🎶", "Musical notes"],
-      ["☀️", "Bright sun"],
-      ["🌈", "Gentle rainbow"],
+      ["☀️", "Sun"],
+      ["🌈", "Rainbow"],
       ["🍰", "Sweet treat"],
       ["🌟", "Glowing star"],
     ],
@@ -520,15 +536,15 @@ const EMOJI_CATEGORIES = [
     name: "Moments",
     items: [
       ["💭", "Thought bubble"],
-      ["💡", "Lightbulb moment"],
-      ["📖", "Good reading"],
-      ["✍️", "Writing notes"],
-      ["🏡", "Comfortable home"],
-      ["🌙", "Evening moon"],
-      ["⭐", "Quiet star"],
-      ["🌧️", "Gentle rain"],
-      ["🍎", "Fresh fruit"],
-      ["🚲", "Bicycle stroll"],
+      ["💡", "Lightbulb"],
+      ["📖", "Book"],
+      ["✍️", "Writing"],
+      ["🏡", "Home"],
+      ["🌙", "Moon"],
+      ["⭐", "Star"],
+      ["🌧️", "Rain"],
+      ["🍎", "Apple"],
+      ["🚲", "Bicycle"],
     ],
   },
 ];
@@ -538,7 +554,7 @@ function Composer({ id, onSend }) {
   const online = useChat((state) => state.networkOnline);
   const [attachment, setAttachment] = useState(null);
   const [emojis, setEmojis] = useState(false);
-  const [emojiCategory, setEmojiCategory] = useState("warmth");
+  const [emojiCategory, setEmojiCategory] = useState("quick");
   const inputRef = useRef(null);
   const recipient = useChat(
     (state) =>
